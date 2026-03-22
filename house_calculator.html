@@ -16,7 +16,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .app{display:flex;height:100vh}
 .sidebar{width:340px;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
 .viewport{flex:1;position:relative;background:linear-gradient(180deg,#dce8f0 0%,#c8d8e4 40%,#a8c4a0 40.5%,#b8d0b0 100%)}
-.side-panel{width:340px;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0;display:none}
+.side-panel{width:320px;max-width:40vw;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;overflow-x:hidden;flex-shrink:0;display:none;position:absolute;right:0;top:0;bottom:0;z-index:10;box-shadow:-4px 0 20px rgba(0,0,0,0.15);box-sizing:border-box;padding-bottom:10px}
 
 /* === SIDEBAR === */
 .logo-bar{padding:14px 20px;background:linear-gradient(135deg,var(--accent),#2d7de0);color:#fff;display:flex;align-items:center;gap:10px}
@@ -60,9 +60,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .floor-section{padding:12px 18px;border-bottom:1px solid var(--border)}
 .floor-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px}
 
-.constr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.constr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
 .constr-cell{
-  aspect-ratio:.85;border:2px dashed var(--border);border-radius:8px;
+  border:2px dashed var(--border);border-radius:8px;padding:6px 4px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   cursor:pointer;transition:all .15s;font-size:10px;color:var(--muted);position:relative;background:#fafafa
 }
@@ -71,6 +71,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .constr-cell.has-door{border:2px solid var(--accent2);background:#fff8f0;color:var(--accent2)}
 .cell-label{font-weight:700;font-size:12px}
 .cell-type{font-size:9px;margin-top:1px}
+.cell-type-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 4px}
+.cell-icon{font-size:16px}
+.cell-del{background:none;border:none;color:#e53935;font-size:14px;cursor:pointer;padding:0 2px;line-height:1}
+.cell-del:hover{color:#b71c1c}
+.size-compact{display:flex;gap:2px;align-items:center;margin-top:3px}
+.size-compact select{width:58px;font-size:10px;padding:2px;border:1px solid #ddd;border-radius:4px;background:#fff}
+.size-compact span{font-size:10px;color:#999}
+.sash-row{display:flex;gap:4px;align-items:center;margin-top:3px;font-size:10px}
+.sash-label{color:#666;white-space:nowrap}
+.sash-row select{width:36px;font-size:10px;padding:2px;border:1px solid #ddd;border-radius:4px;background:#fff}
 .size-inputs{display:flex;gap:3px;margin-top:3px;align-items:center}
 .size-inputs input{width:38px;background:#fff;border:1px solid var(--border);color:var(--text);padding:2px 3px;border-radius:4px;font-size:10px;text-align:center}
 .size-inputs span{font-size:9px;color:var(--muted)}
@@ -322,13 +332,13 @@ function init3D(){
   canvas.addEventListener('pointermove', e=>{
     if(!orbit.drag)return;
     const dx=e.clientX-orbit.lx, dy=e.clientY-orbit.ly;
-    if(Math.abs(e.clientX-orbit.sx)>4||Math.abs(e.clientY-orbit.sy)>4) orbit.moved=true;
+    if(Math.abs(e.clientX-orbit.sx)>8||Math.abs(e.clientY-orbit.sy)>8) orbit.moved=true;
     orbit.theta -= dx*0.005;
     orbit.phi = Math.max(0.05, Math.min(1.45, orbit.phi-dy*0.005));
     orbit.lx=e.clientX; orbit.ly=e.clientY;
   });
-  canvas.addEventListener('pointerup', ()=>orbit.drag=false);
-  canvas.addEventListener('pointerleave', ()=>orbit.drag=false);
+  canvas.addEventListener('pointerup', ()=>{orbit.drag=false});
+  canvas.addEventListener('pointerleave', ()=>{orbit.drag=false});
   canvas.addEventListener('wheel', e=>{orbit.dist=Math.max(4,Math.min(30,orbit.dist+e.deltaY*0.008));e.preventDefault()},{passive:false});
   canvas.addEventListener('click', onClick3D);
 
@@ -383,18 +393,72 @@ function buildHouse(){
   ];
 
   walls.forEach(wl=>{
-    const g = new THREE.BoxGeometry(wl.scaleX, totalH, 0.15);
     const m = wallMat.clone();
-    // Highlight active
-    if(S.activeSide === wl.side) m.emissive = new THREE.Color(0x1a5cb8).multiplyScalar(0.08);
-    const mesh = new THREE.Mesh(g, m);
-    mesh.position.set(...wl.pos);
-    mesh.rotation.set(...wl.rot);
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    mesh.userData = {side:wl.side, clickable:true};
-    scene.add(mesh);
-    allMeshes.push(mesh);
-    wallClickMeshes.push(mesh);
+    if(S.activeSide === wl.side){
+      m.color = new THREE.Color(0x88bbee);
+      m.emissive = new THREE.Color(0x1a5cb8);
+      m.emissiveIntensity = 0.25;
+      m.opacity = 0.85;
+      m.transparent = true;
+    }
+
+    // Collect openings for this wall — пропускаем этажи с ошибками валидации
+    const openings = [];
+    Object.entries(S.constructions).forEach(([key, c])=>{
+      const [s, fl, pos] = key.split('_');
+      if(s!==wl.side) return;
+      if(hasValidationErrors(s, +fl)) return; // не рендерим проёмы при ошибках
+      const cp = calcConstrPos(s, +fl, +pos, c, hw, hd);
+      openings.push({x:cp.xLocal, y:cp.yLocal, w:cp.cw, h:cp.ch});
+    });
+
+    if(openings.length===0){
+      // Solid wall
+      const g = new THREE.BoxGeometry(wl.scaleX, totalH, 0.15);
+      const mesh = new THREE.Mesh(g, m);
+      mesh.position.set(...wl.pos);
+      mesh.rotation.set(...wl.rot);
+      mesh.castShadow=true; mesh.receiveShadow=true;
+      mesh.userData={side:wl.side,clickable:true};
+      scene.add(mesh); allMeshes.push(mesh); wallClickMeshes.push(mesh);
+    } else {
+      // Wall with openings — use Shape with holes
+      const wallW = wl.scaleX;
+      const shape = new THREE.Shape();
+      shape.moveTo(-wallW/2, 0);
+      shape.lineTo(wallW/2, 0);
+      shape.lineTo(wallW/2, totalH);
+      shape.lineTo(-wallW/2, totalH);
+      shape.lineTo(-wallW/2, 0);
+
+      // Проём больше окна: +20мм лево/право, +20мм верх, +30мм низ
+      const PAD_L=20*SCALE, PAD_R=20*SCALE, PAD_T=20*SCALE, PAD_B=30*SCALE;
+      openings.forEach(o=>{
+        const hole = new THREE.Path();
+        // CW winding для дырок (Three.js ожидает CW для holes)
+        const l = o.x - o.w/2 - PAD_L, r = o.x + o.w/2 + PAD_R;
+        const b = o.y - o.h/2 - PAD_B, t = o.y + o.h/2 + PAD_T;
+        hole.moveTo(l, b);
+        hole.lineTo(l, t);
+        hole.lineTo(r, t);
+        hole.lineTo(r, b);
+        hole.lineTo(l, b);
+        shape.holes.push(hole);
+      });
+
+      const extrudeSettings = {depth:0.15, bevelEnabled:false};
+      const g = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      g.translate(0, 0, -0.075);
+      const mesh = new THREE.Mesh(g, m);
+      // Position: center of wall, but y=0 since shape starts at 0
+      const basePos = [...wl.pos];
+      basePos[1] = 0; // shape starts from y=0
+      mesh.position.set(...basePos);
+      mesh.rotation.set(...wl.rot);
+      mesh.castShadow=true; mesh.receiveShadow=true;
+      mesh.userData={side:wl.side,clickable:true};
+      scene.add(mesh); allMeshes.push(mesh); wallClickMeshes.push(mesh);
+    }
   });
 
   // Floor slabs
@@ -425,94 +489,223 @@ function buildHouse(){
   buildSideLabels(hw, hd, totalH);
 }
 
+// Вычисляет позицию конструкции в wall-local и world координатах
+function calcConstrPos(side, floorNum, posNum, c, hw, hd){
+  const wallLen = (side==='A'||side==='C') ? S.sideAC : S.sideBD;
+  const wallLenS = wallLen * SCALE;
+  const cw = c.w*SCALE, ch = c.h*SCALE;
+
+  // 1=левый край, 2=рядом с 1, 3=рядом с 4, 4=правый край
+  const MARGIN = 700*SCALE;
+  const GAP = 1000*SCALE;
+  const step = cw + GAP;
+  const leftEdge = wallLenS/2 - MARGIN - cw/2;
+  const rightEdge = -wallLenS/2 + MARGIN + cw/2;
+
+  let xLocal;
+  if(posNum === 1) xLocal = leftEdge;
+  else if(posNum === 2) xLocal = leftEdge - step;
+  else if(posNum === 4) xLocal = rightEdge;
+  else xLocal = rightEdge + step; // posNum === 3
+
+  // Стены B/D: поворот ±π/2 зеркалит локальную X → инвертируем
+  if(side==='B'||side==='D') xLocal = -xLocal;
+  let yLocal;
+  if(c.type==='door') yLocal = (floorNum-1)*FLOOR_H*SCALE + 300*SCALE + ch/2;
+  else if(c.h<=1500) yLocal = (floorNum-1)*FLOOR_H*SCALE + 900*SCALE + ch/2;
+  else yLocal = (floorNum-1)*FLOOR_H*SCALE + FLOOR_H*SCALE/2;
+
+  // Мировые координаты и поворот окна
+  // Стена Extrude depth идёт по +Z в local, translate -0.075 центрирует
+  // Wall A: pos=[0,0,-hd], rot.y=0 → local X = world X
+  // Wall C: pos=[0,0,+hd], rot.y=π → local X = -world X
+  // Wall B: pos=[+hw,0,0], rot.y=π/2 → local X → world -Z
+  // Wall D: pos=[-hw,0,0], rot.y=-π/2 → local X → world Z
+  const RECESS = 100*SCALE;
+  const wallHalf = 0.075;
+  let wx, wy, wz, wry;
+
+  switch(side){
+    case 'A': // outward = -Z
+      wx = xLocal; wy = yLocal; wz = -hd - wallHalf + RECESS;
+      wry = Math.PI;
+      break;
+    case 'C': // outward = +Z, wall rot.y=π flips x
+      wx = -xLocal; wy = yLocal; wz = hd + wallHalf - RECESS;
+      wry = 0;
+      break;
+    case 'B': // outward = +X → rotation π/2 maps local +Z to world +X
+      wx = hw + wallHalf - RECESS; wy = yLocal; wz = -xLocal;
+      wry = Math.PI/2;
+      break;
+    case 'D': // outward = -X → rotation -π/2 maps local +Z to world -X
+      wx = -hw - wallHalf + RECESS; wy = yLocal; wz = xLocal;
+      wry = -Math.PI/2;
+      break;
+  }
+
+  return {xLocal, yLocal, cw, ch, wx, wy, wz, wry};
+}
+
 function buildConstructions3D(hw, hd, totalH){
-  const frameMat = new THREE.MeshStandardMaterial({color:S.frameOuter, roughness:0.35, metalness:0.05});
-  const glassMat = new THREE.MeshStandardMaterial({color:'#a8d4f0', transparent:true, opacity:0.45, roughness:0.05, metalness:0.2});
-  const doorMat = new THREE.MeshStandardMaterial({color:S.frameOuter, roughness:0.5});
+  const frameColor = new THREE.Color(S.frameOuter);
+  const frameMat = new THREE.MeshStandardMaterial({color:frameColor, roughness:0.3, metalness:0.05});
+  const glassMat = new THREE.MeshStandardMaterial({
+    color:'#88ccee', transparent:true, opacity:0.25,
+    roughness:0.0, metalness:0.3, side:THREE.DoubleSide
+  });
+  const sillMat = new THREE.MeshStandardMaterial({color:'#e0e0e0', roughness:0.6});
+  const handleMat = new THREE.MeshStandardMaterial({color:'#b0b0b0', metalness:0.9, roughness:0.15});
+
+  const FRAME_W = 0.035;
+  const FRAME_D = 0.065;
 
   Object.entries(S.constructions).forEach(([key, c])=>{
     const [side, fl, pos] = key.split('_');
+    if(hasValidationErrors(side, +fl)) return; // не рендерим при ошибках
     const floorNum = +fl, posNum = +pos;
-
-    const wallLen = (side==='A'||side==='C') ? S.sideAC : S.sideBD;
-    const wallLenS = wallLen * SCALE;
-    const cw = c.w*SCALE, ch = c.h*SCALE;
-
-    // Horizontal position — evenly distribute
-    const slots = countSlots(side, floorNum);
-    const spacing = wallLenS / (slots+1);
-    const xOff = -wallLenS/2 + spacing * posNum;
-
-    // Vertical position
-    let yOff;
-    if(c.type==='door'){
-      yOff = (floorNum-1)*FLOOR_H*SCALE + 300*SCALE + ch/2;
-    } else {
-      if(c.h <= 1500) yOff = (floorNum-1)*FLOOR_H*SCALE + 900*SCALE + ch/2;
-      else yOff = (floorNum-1)*FLOOR_H*SCALE + FLOOR_H*SCALE/2;
-    }
+    const p = calcConstrPos(side, floorNum, posNum, c, hw, hd);
+    const cw = p.cw, ch = p.ch;
 
     const group = new THREE.Group();
 
     if(c.type==='window'){
-      // Frame
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(cw, ch, 0.05), frameMat.clone());
-      group.add(frame);
-      // Glass
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(cw-0.05, ch-0.05, 0.02), glassMat.clone());
-      glass.position.z = 0.005;
-      group.add(glass);
-      // Mullions
+      // === Outer frame (рама) — 4 бруска ===
+      const fm = frameMat.clone();
+      // top
+      group.add(makeBox(cw, FRAME_W, FRAME_D, 0, ch/2-FRAME_W/2, 0, fm));
+      // bottom
+      group.add(makeBox(cw, FRAME_W, FRAME_D, 0, -ch/2+FRAME_W/2, 0, fm));
+      // left
+      group.add(makeBox(FRAME_W, ch-FRAME_W*2, FRAME_D, -cw/2+FRAME_W/2, 0, 0, fm));
+      // right
+      group.add(makeBox(FRAME_W, ch-FRAME_W*2, FRAME_D, cw/2-FRAME_W/2, 0, 0, fm));
+
+      // Подоконник (отлив снаружи)
+      group.add(makeBox(cw+0.04, 0.01, 0.08, 0, -ch/2-0.005, 0.04, sillMat));
+
+      // === Створки ===
       let parts = 1;
       if(c.w>800 && c.w<=1600) parts=2;
       else if(c.w>1600) parts=3;
-      for(let i=1;i<parts;i++){
-        const mul = new THREE.Mesh(new THREE.BoxGeometry(0.025, ch-0.05, 0.035), frameMat.clone());
-        mul.position.x = -cw/2 + (cw/parts)*i;
-        mul.position.z = 0.01;
-        group.add(mul);
+
+      const innerW = cw - FRAME_W*2;
+      const innerH = ch - FRAME_W*2;
+      const partW = innerW / parts;
+      const SASH_W = 0.028; // ширина створки
+      const SASH_D = 0.045;
+
+      for(let i=0; i<parts; i++){
+        const px = -innerW/2 + partW*i + partW/2;
+
+        // Импост (вертикальная перегородка между частями)
+        if(i>0){
+          group.add(makeBox(0.025, innerH, FRAME_D, -innerW/2+partW*i, 0, 0, fm));
+        }
+
+        // Стекло — заполняет секцию от рамы до рамы/импоста
+        // Толщина стеклопакета: 1кам=24мм, 2кам=32мм, энерго=24мм
+        const glassTh = (S.filling==='single' ? 24 : S.filling==='double' ? 32 : 24) * SCALE;
+        const halfImpost = 0.0125;
+        const glassW = partW - (i===0 ? 0 : halfImpost) - (i===parts-1 ? 0 : halfImpost) - 0.004;
+        const glassH = innerH - 0.004;
+        const gl = new THREE.Mesh(new THREE.BoxGeometry(glassW, glassH, glassTh), glassMat.clone());
+        gl.position.set(px, 0, 0);
+        group.add(gl);
+
+        // Створка — откинута внутрь дома (вид снаружи)
+        const sashCount = c.sashCount !== undefined ? c.sashCount : (parts>1 ? 1 : 0);
+        const hasSash = (i >= parts - sashCount);
+        if(hasSash){
+          const sw = partW - 0.008;
+          const sh = innerH - 0.005;
+          const sf = fm.clone();
+
+          // Створка строится в своих координатах, центр = центр створки
+          const sashGrp = new THREE.Group();
+          // Рамка створки
+          sashGrp.add(makeBox(sw, SASH_W, SASH_D, 0, sh/2-SASH_W/2, 0, sf));
+          sashGrp.add(makeBox(sw, SASH_W, SASH_D, 0, -sh/2+SASH_W/2, 0, sf));
+          sashGrp.add(makeBox(SASH_W, sh-SASH_W*2, SASH_D, -sw/2+SASH_W/2, 0, 0, sf));
+          sashGrp.add(makeBox(SASH_W, sh-SASH_W*2, SASH_D, sw/2-SASH_W/2, 0, 0, sf));
+          // Стекло створки
+          sashGrp.add(new THREE.Mesh(new THREE.BoxGeometry(sw-SASH_W*2, sh-SASH_W*2, 0.008), glassMat.clone()));
+          // Ручка на внутренней стороне (-Z)
+          const hSide = (i === parts-1) ? -1 : 1;
+          sashGrp.add(makeBox(0.008, 0.05, 0.015, hSide*(sw/2-SASH_W-0.01), 0, -SASH_D/2-0.008, handleMat));
+
+          // Pivot = нижняя кромка створки (петли снизу)
+          // Сдвигаем створку вверх на sh/2 чтобы низ был в точке вращения
+          sashGrp.position.y = sh/2;
+
+          const pivotGrp = new THREE.Group();
+          pivotGrp.add(sashGrp);
+          // Pivot в нижней части секции
+          pivotGrp.position.set(px, -innerH/2 + 0.003, 0);
+          // Откид внутрь: отрицательный угол по X = верх уходит в -Z (внутрь дома)
+          pivotGrp.rotation.x = -0.12; // ~7° откид внутрь
+          group.add(pivotGrp);
+        }
       }
     } else {
-      // Door
-      const door = new THREE.Mesh(new THREE.BoxGeometry(cw, ch, 0.05), doorMat.clone());
-      group.add(door);
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(cw-0.08, ch*0.4, 0.02), glassMat.clone());
-      glass.position.y = ch*0.2;
-      glass.position.z = 0.01;
-      group.add(glass);
-      // Handle
-      const handle = new THREE.Mesh(
-        new THREE.BoxGeometry(0.015, 0.08, 0.025),
-        new THREE.MeshStandardMaterial({color:'#c0c0c0', metalness:0.8, roughness:0.2})
-      );
-      handle.position.set(cw/2-0.06, -ch*0.1, 0.03);
+      // === Дверь ===
+      const fm = frameMat.clone();
+      const doorColor = new THREE.MeshStandardMaterial({color:frameColor, roughness:0.45, metalness:0.02});
+
+      // Рама двери
+      group.add(makeBox(cw, FRAME_W, FRAME_D, 0, ch/2-FRAME_W/2, 0, fm));
+      group.add(makeBox(FRAME_W, ch-FRAME_W, FRAME_D, -cw/2+FRAME_W/2, -FRAME_W/2, 0, fm));
+      group.add(makeBox(FRAME_W, ch-FRAME_W, FRAME_D, cw/2-FRAME_W/2, -FRAME_W/2, 0, fm));
+
+      // Дверное полотно
+      const dw = cw-FRAME_W*2-0.01, dh = ch-FRAME_W-0.01;
+      group.add(makeBox(dw, dh, 0.04, 0, -FRAME_W/2, 0.01, doorColor));
+
+      // Стекло в верхней части
+      const glH = dh*0.35;
+      const gl = new THREE.Mesh(new THREE.BoxGeometry(dw-0.06, glH, 0.008), glassMat.clone());
+      gl.position.set(0, ch/2-FRAME_W-glH/2-0.03, 0.03);
+      group.add(gl);
+
+      // Ручка
+      const handle = makeBox(0.012, 0.06, 0.02, cw/2-FRAME_W-0.04, -0.05, 0.04, handleMat);
       group.add(handle);
+
       if(c.w>900){
-        const mul = new THREE.Mesh(new THREE.BoxGeometry(0.025, ch-0.06, 0.035), frameMat.clone());
-        mul.position.z = 0.01;
-        group.add(mul);
+        group.add(makeBox(0.025, dh-0.03, FRAME_D, 0, -FRAME_W/2, 0.005, fm));
       }
+
+      // Порог
+      group.add(makeBox(cw+0.02, 0.015, 0.06, 0, -ch/2+0.005, 0.03, sillMat));
     }
 
-    // Position on correct wall
-    const off = 0.05;
-    switch(side){
-      case 'A': group.position.set(xOff, yOff, -hd-off); break;
-      case 'C': group.position.set(-xOff, yOff, hd+off); group.rotation.y=Math.PI; break;
-      case 'B': group.position.set(hw+off, yOff, xOff); group.rotation.y=Math.PI/2; break;
-      case 'D': group.position.set(-hw-off, yOff, -xOff); group.rotation.y=-Math.PI/2; break;
-    }
+    // Позиция из единого расчёта — совпадает с проёмами
+    group.position.set(p.wx, p.wy, p.wz);
+    group.rotation.y = p.wry;
 
-    group.castShadow = true;
     scene.add(group);
     allMeshes.push(group);
   });
 }
 
-function countSlots(side, floor){
-  let count = 0;
-  for(let p=1;p<=4;p++) if(S.constructions[`${side}_${floor}_${p}`]) count++;
-  return Math.max(count, 4);
+function makeBox(w,h,d,x,y,z,mat){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x,y,z);
+  m.castShadow=true;
+  return m;
+}
+
+// Сколько окон помещается на стене (макс 4)
+function maxSlots(side){
+  const wallLen = (side==='A'||side==='C') ? S.sideAC : S.sideBD;
+  const margin = 700, gap = 1000, w = 1200; // базовое окно 1200мм
+  let n = 0, need = 2*margin;
+  while(n < 4){
+    need += w + (n > 0 ? gap : 0);
+    if(need > wallLen) break;
+    n++;
+  }
+  return Math.max(n, 1);
 }
 
 function buildRoof(hw, hd, totalH){
@@ -654,11 +847,20 @@ function onClick3D(e){
 
 function selectSide(side){
   S.activeSide = side;
-  document.getElementById('sidePanel').style.display = 'block';
+  const sp = document.getElementById('sidePanel');
+  sp.style.display = 'block';
+  sp.style.width = '340px';
   document.getElementById('activeSideName').textContent = side;
   document.querySelectorAll('.side-tab').forEach(t=>t.classList.toggle('active', t.dataset.side===side));
   buildHouse();
   buildFloorGrids();
+  // Resize canvas after panel appears
+  setTimeout(()=>{
+    const vp = document.getElementById('viewport');
+    const w2 = vp.clientWidth, h2 = vp.clientHeight - 52;
+    camera.aspect = w2/h2; camera.updateProjectionMatrix();
+    renderer.setSize(w2, h2);
+  }, 50);
 }
 
 // ============================================================
@@ -676,7 +878,6 @@ function buildFloorGrids(){
     sec.innerHTML = `<div class="floor-title">${f}-й этаж</div>`;
     const grid = document.createElement('div');
     grid.className = 'constr-grid';
-
     for(let p=1; p<=4; p++){
       const key = `${side}_${f}_${p}`;
       const c = S.constructions[key];
@@ -684,20 +885,40 @@ function buildFloorGrids(){
       const lbl = `${side}${(f-1)*4+p}`;
 
       if(c){
-        cell.className = `constr-cell ${c.type==='door'?'has-door':'has-window'}`;
+        const isD = c.type==='door';
+        // Определяем кол-во частей
+        let parts = 1;
+        if(!isD){
+          if(c.w>800 && c.w<=1600) parts=2;
+          else if(c.w>1600) parts=3;
+        }
+        // Инициализируем sashCount если нет
+        if(c.sashCount === undefined) c.sashCount = isD ? 0 : (parts>1 ? 1 : 0);
+
+        cell.className = `constr-cell ${isD?'has-door':'has-window'}`;
         cell.innerHTML = `
           <div class="cell-label">${lbl}</div>
-          <div class="cell-type">${c.type==='door'?'Дверь':'Окно'}</div>
-          <div class="size-inputs">
-            <input type="number" value="${c.w}" min="${c.type==='door'?650:500}" max="2000" step="50"
-              data-key="${key}" data-dim="w" onclick="event.stopPropagation()" title="Ширина">
-            <span>&times;</span>
-            <input type="number" value="${c.h}" min="${c.type==='door'?1900:500}" max="${c.type==='door'?2200:2000}" step="50"
-              data-key="${key}" data-dim="h" onclick="event.stopPropagation()" title="Высота">
-          </div>`;
-        cell.title = 'Клик = сменить тип | ПКМ = удалить';
-        cell.addEventListener('contextmenu', e=>{
-          e.preventDefault();
+          <div class="cell-type-row">
+            <span class="cell-icon">${isD?'🚪':'🪟'}</span>
+            <button class="cell-del" data-key="${key}" title="Удалить">✕</button>
+          </div>
+          <div class="size-compact">
+            <select data-key="${key}" data-dim="w" onclick="event.stopPropagation()">
+              ${buildSizeOptions(isD?650:500, 2000, 50, c.w)}
+            </select>
+            <span>×</span>
+            <select data-key="${key}" data-dim="h" onclick="event.stopPropagation()">
+              ${buildSizeOptions(isD?1900:500, isD?2200:2000, 50, c.h)}
+            </select>
+          </div>
+          ${!isD ? `<div class="sash-row">
+            <span class="sash-label">Створки:</span>
+            <select data-key="${key}" data-dim="sash" onclick="event.stopPropagation()">
+              ${Array.from({length:parts+1},(_, n)=>`<option value="${n}" ${n===c.sashCount?'selected':''}>${n}</option>`).join('')}
+            </select>
+          </div>` : ''}`;
+        cell.querySelector('.cell-del').addEventListener('click', e=>{
+          e.stopPropagation();
           delete S.constructions[key];
           refresh();
         });
@@ -714,14 +935,28 @@ function buildFloorGrids(){
     box.appendChild(sec);
   }
 
-  // Size change handlers
-  box.querySelectorAll('.size-inputs input').forEach(inp=>{
-    inp.addEventListener('change', e=>{
+  // Size & sash change handlers
+  box.querySelectorAll('.size-compact select, .sash-row select').forEach(sel=>{
+    sel.addEventListener('change', e=>{
+      e.stopPropagation();
       const k = e.target.dataset.key, dim = e.target.dataset.dim;
-      if(S.constructions[k]) S.constructions[k][dim] = parseInt(e.target.value);
+      if(!S.constructions[k]) return;
+      if(dim==='sash'){
+        S.constructions[k].sashCount = parseInt(e.target.value);
+      } else {
+        S.constructions[k][dim] = parseInt(e.target.value);
+      }
       refresh();
     });
   });
+}
+
+function buildSizeOptions(min, max, step, current){
+  let html = '';
+  for(let v=min; v<=max; v+=step){
+    html += `<option value="${v}" ${v===current?'selected':''}>${v}</option>`;
+  }
+  return html;
 }
 
 function toggleCell(key, floor){
@@ -734,6 +969,15 @@ function toggleCell(key, floor){
     }
   } else {
     S.constructions[key] = {type:'window', w:1200, h:1400};
+    const err = validate();
+    if(err){
+      delete S.constructions[key];
+      const el = document.getElementById('validationMsg');
+      el.textContent = err;
+      el.classList.add('show');
+      setTimeout(()=>el.classList.remove('show'), 3000);
+      return;
+    }
   }
   refresh();
 }
@@ -751,28 +995,114 @@ function refresh(){
 // VALIDATION
 // ============================================================
 function validate(){
+  const errors = [];
   for(const side of ['A','B','C','D']){
     const wallLen = (side==='A'||side==='C') ? S.sideAC : S.sideBD;
     for(let f=1;f<=S.floors;f++){
       const items=[];
       for(let p=1;p<=4;p++){
         const c=S.constructions[`${side}_${f}_${p}`];
-        if(c) items.push(c);
+        if(c) items.push({p, c});
       }
       if(!items.length) continue;
-      const totalW = items.reduce((s,c)=>s+c.w, 0);
-      const need = totalW + (items.length-1)*1000 + 2*1000;
-      if(need > wallLen){
-        return `Сторона ${side}, ${f}-й этаж: не помещается! Нужно ${need}мм, стена ${wallLen}мм`;
+
+      // Вычисляем реальные позиции (та же формула что в calcConstrPos)
+      // 1=лево, 2=рядом с 1, 3=рядом с 4, 4=право
+      const MG = 700, GP = 1000;
+      function posCenter(p, w){
+        const cw = w;
+        const leftE = wallLen/2 - MG - cw/2;
+        const rightE = -wallLen/2 + MG + cw/2;
+        const stp = cw + GP;
+        if(p===1) return leftE;
+        if(p===2) return leftE - stp;
+        if(p===4) return rightE;
+        return rightE + stp; // p===3
+      }
+
+      // Проверяем: окно не выходит за стену
+      items.forEach(it=>{
+        const lbl = `${side}${(f-1)*4+it.p}`;
+        const cx = posCenter(it.p, it.c.w);
+        if(cx - it.c.w/2 < -wallLen/2 + MG || cx + it.c.w/2 > wallLen/2 - MG){
+          errors.push(`${lbl}: не помещается на стене ${wallLen}мм`);
+        }
+      });
+
+      // Проверяем зазоры между всеми парами заполненных окон
+      // Сортируем по реальной позиции (от большей к меньшей = лево→право)
+      const sorted = items.map(it=>({...it, cx:posCenter(it.p, it.c.w)})).sort((a,b)=>b.cx-a.cx);
+      for(let i=0;i<sorted.length-1;i++){
+        const a=sorted[i], b=sorted[i+1];
+        const gap = (a.cx - a.c.w/2) - (b.cx + b.c.w/2);
+        if(gap < GP){
+          const la=`${side}${(f-1)*4+a.p}`, lb=`${side}${(f-1)*4+b.p}`;
+          errors.push(`${la} и ${lb}: зазор ${Math.round(gap)}мм (мин ${GP}мм)`);
+        }
+      }
+
+      // Проверка: мин ширина/высота
+      items.forEach(it=>{
+        const lbl = `${side}${(f-1)*4+it.p}`;
+        const c = it.c;
+        if(c.type==='window'){
+          if(c.w < 500) errors.push(`${lbl}: мин ширина окна 500мм`);
+          if(c.h < 500) errors.push(`${lbl}: мин высота окна 500мм`);
+          if(c.w > 2000) errors.push(`${lbl}: макс ширина окна 2000мм`);
+          if(c.h > 2000) errors.push(`${lbl}: макс высота окна 2000мм`);
+        } else {
+          if(c.w < 650) errors.push(`${lbl}: мин ширина двери 650мм`);
+          if(c.h < 1900) errors.push(`${lbl}: мин высота двери 1900мм`);
+          if(c.w > 2000) errors.push(`${lbl}: макс ширина двери 2000мм`);
+          if(c.h > 2200) errors.push(`${lbl}: макс высота двери 2200мм`);
+        }
+      });
+
+      // Проверка: двери только на 1 этаже
+      if(f > 1){
+        items.forEach(it=>{
+          if(it.c.type==='door'){
+            const lbl = `${side}${(f-1)*4+it.p}`;
+            errors.push(`${lbl}: двери только на 1-м этаже!`);
+          }
+        });
       }
     }
   }
-  // Doors only on 1st floor
-  for(const key of Object.keys(S.constructions)){
-    const [,fl] = key.split('_');
-    if(+fl > 1 && S.constructions[key].type==='door') return 'Двери только на 1-м этаже!';
+  return errors.length ? errors[0] : null;
+}
+
+// Проверяет конкретную стену+этаж на ошибки (для пропуска рендера)
+function hasValidationErrors(side, floor){
+  const wallLen = (side==='A'||side==='C') ? S.sideAC : S.sideBD;
+  const items=[];
+  for(let p=1;p<=4;p++){
+    const c=S.constructions[`${side}_${floor}_${p}`];
+    if(c) items.push({p, c});
   }
-  return null;
+  if(!items.length) return false;
+  const MG = 700, GP = 1000;
+  function posCenter(p, w){
+    const cw = w;
+    const leftE = wallLen/2 - MG - cw/2;
+    const rightE = -wallLen/2 + MG + cw/2;
+    const stp = cw + GP;
+    if(p===1) return leftE;
+    if(p===2) return leftE - stp;
+    if(p===4) return rightE;
+    return rightE + stp; // p===3
+  }
+  for(const it of items){
+    const cx = posCenter(it.p, it.c.w);
+    if(cx - it.c.w/2 < -wallLen/2 + MG || cx + it.c.w/2 > wallLen/2 - MG) return true;
+  }
+  const sorted = items.map(it=>({...it, cx:posCenter(it.p, it.c.w)})).sort((a,b)=>b.cx-a.cx);
+  for(let i=0;i<sorted.length-1;i++){
+    const a=sorted[i], b=sorted[i+1];
+    const gap = (a.cx - a.c.w/2) - (b.cx + b.c.w/2);
+    if(gap < GP) return true;
+  }
+  return false;
 }
 
 // ============================================================
@@ -812,8 +1142,14 @@ function updateSummary(){
 // ============================================================
 function initUI(){
   // Dimensions
-  document.getElementById('sideAC').addEventListener('change', e=>{S.sideAC=clamp(+e.target.value,2000,12000);buildHouse();updateSummary()});
-  document.getElementById('sideBD').addEventListener('change', e=>{S.sideBD=clamp(+e.target.value,2000,12000);buildHouse();updateSummary()});
+  document.getElementById('sideAC').addEventListener('change', e=>{
+    S.sideAC=clamp(+e.target.value,2000,12000);
+    buildHouse(); if(S.activeSide) buildFloorGrids(); updateSummary();
+  });
+  document.getElementById('sideBD').addEventListener('change', e=>{
+    S.sideBD=clamp(+e.target.value,2000,12000);
+    buildHouse(); if(S.activeSide) buildFloorGrids(); updateSummary();
+  });
   document.getElementById('floors').addEventListener('change', e=>{
     S.floors=+e.target.value;
     Object.keys(S.constructions).forEach(k=>{if(+k.split('_')[1]>S.floors) delete S.constructions[k]});
@@ -837,7 +1173,7 @@ function initUI(){
   const pg=document.getElementById('profileGroup');
   PROFILES.forEach((p,i)=>{
     const d=document.createElement('div'); d.className='check-item';
-    d.innerHTML=`<input type="checkbox" id="prof_${p.id}" ${i===0?'checked':''}><label for="prof_${p.id}">${p.name}</label>`;
+    d.innerHTML=`<input type="radio" name="profile" id="prof_${p.id}" value="${p.id}" ${i===0?'checked':''}><label for="prof_${p.id}">${p.name}</label>`;
     pg.appendChild(d);
   });
   // Thicknesses (radio — only one)
@@ -864,13 +1200,11 @@ function initUI(){
 }
 
 function updateProfiles(){
-  S.profiles=[];
-  document.querySelectorAll('#profileGroup input:checked').forEach(cb=>S.profiles.push(cb.id.replace('prof_','')));
+  const sel = document.querySelector('#profileGroup input:checked');
+  S.profiles = sel ? [sel.value] : ['rehau'];
   const avail=new Set();
-  S.profiles.forEach(p=>{
-    const prof=PROFILES.find(x=>x.id===p);
-    if(prof) prof.thick.forEach(t=>avail.add(t));
-  });
+  const prof=PROFILES.find(x=>x.id===S.profiles[0]);
+  if(prof) prof.thick.forEach(t=>avail.add(t));
   let currentChecked = document.querySelector('#thicknessGroup input:checked');
   [58,60,70,80].forEach(t=>{
     const rb=document.getElementById(`thick_${t}`);
@@ -882,8 +1216,8 @@ function updateProfiles(){
     const first = document.querySelector('#thicknessGroup input:not(:disabled)');
     if(first) first.checked=true;
   }
-  const sel = document.querySelector('#thicknessGroup input:checked');
-  S.thicknesses = sel ? [+sel.value] : [];
+  const thickSel = document.querySelector('#thicknessGroup input:checked');
+  S.thicknesses = thickSel ? [+thickSel.value] : [];
   updateSummary();
 }
 
