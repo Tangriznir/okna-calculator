@@ -175,12 +175,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer">
         <input type="checkbox" id="nalichnikiOn"> Фирменные наличники
       </label>
-      <div class="color-row" id="nalichnikiColors" style="display:none"></div>
-      <div style="margin-top:10px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="otlivOn"> Отлив
-        </label>
-      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="otlivOn"> Отлив
+      </label>
+      <div class="color-row" id="nalichnikiColors" style="display:none;margin-top:8px"></div>
     </div>
   </div>
 
@@ -664,37 +662,47 @@ function buildConstructions3D(hw, hd, totalH){
       // right
       group.add(makeBox(FRAME_W, ch-FRAME_W*2, FRAME_D, cw/2-FRAME_W/2, 0, 0, fm));
 
-      // Наличники — объёмная рамка вокруг окна (150мм ширина, 20мм толщина)
+      // === НАЛИЧНИКИ (жёлтый на чертеже) ===
+      // Окно утоплено на RECESS от наружной стены.
+      // Наружная поверхность стены в local z = RECESS (0.1) от центра group.
+      const NW = 0.15;   // 150мм ширина планки
+      const RECESS_LOCAL = 0.1; // расстояние от центра group до наружной стены
+      const NOUT = 0.025; // выступ наличника наружу за стену
+      const ND = RECESS_LOCAL - FRAME_D/2 + NOUT; // глубина: от рамы до стены + выступ
+      const nz = FRAME_D/2 + ND/2; // центр: начинается от рамы
+
       if(S.nalichniki){
         const nMat = new THREE.MeshStandardMaterial({color:S.nalichnikiColor, roughness:0.5, metalness:0.02});
-        if(S.nalichnikiColor==='#ffffff') nMat.color = new THREE.Color('#f5f5f5');
-        const NW = 0.15 * SCALE * 1000; // 150мм
-        const ND = 0.02;  // 20мм толщина (выступ наружу)
-        const nz = FRAME_D/2 + ND/2; // перед рамой
-        // верх
+        // верхний
         group.add(makeBox(cw + NW*2, NW, ND, 0, ch/2 + NW/2, nz, nMat));
-        // низ
+        // нижний
         group.add(makeBox(cw + NW*2, NW, ND, 0, -ch/2 - NW/2, nz, nMat));
-        // лево
+        // левый (высота = только окно)
         group.add(makeBox(NW, ch, ND, -cw/2 - NW/2, 0, nz, nMat));
-        // право
+        // правый
         group.add(makeBox(NW, ch, ND, cw/2 + NW/2, 0, nz, nMat));
       }
 
-      // Отлив — наклонный козырёк под окном
+      // === ОТЛИВ (зелёный на чертеже) ===
+      // На уровне нижней рамы, выступает наружу дальше наличников.
+      // Ширина = окно (между боковыми наличниками).
       if(S.otliv){
-        const oMat = new THREE.MeshStandardMaterial({color:'#c0c0c0', roughness:0.3, metalness:0.5});
-        const oW = cw + 0.06; // чуть шире окна
-        const oD = 0.12;      // глубина отлива
-        const oH = 0.003;     // толщина металла
+        const oMat = new THREE.MeshStandardMaterial({color:S.nalichnikiColor, roughness:0.3, metalness:0.4});
+        const oW = cw;         // ширина = окно
+        const oOUT = 0.12;    // выступ отлива наружу за стену
+        const oD = RECESS_LOCAL - FRAME_D/2 + oOUT; // от рамы до стены + выступ
+        const oH = 0.004;      // толщина металла
         const oGeo = new THREE.BoxGeometry(oW, oH, oD);
         const oMesh = new THREE.Mesh(oGeo, oMat);
-        oMesh.position.set(0, -ch/2 - 0.01, FRAME_D/2 + oD/2 - 0.01);
-        oMesh.rotation.x = 0.15; // наклон вниз ~8°
+        // Y = низ рамы, Z = центрировано от рамы наружу
+        oMesh.position.set(0, -ch/2, FRAME_D/2 + oD/2);
+        oMesh.rotation.x = 0.1; // лёгкий наклон
         oMesh.castShadow = true;
         group.add(oMesh);
-      } else {
-        // Стандартный подоконник
+      }
+
+      // Подоконник (если нет ни отлива ни наличников)
+      if(!S.otliv && !S.nalichniki){
         group.add(makeBox(cw+0.04, 0.01, 0.08, 0, -ch/2-0.005, 0.04, sillMat));
       }
 
@@ -1329,14 +1337,18 @@ function initUI(){
   const NALICHNIKI_COLORS = [
     {name:'Белый',color:'#ffffff'},{name:'Коричневый',color:'#5a3a1e'},{name:'Серый',color:'#808080'}
   ];
+  function updateNalOtlivColors(){
+    document.getElementById('nalichnikiColors').style.display = (S.nalichniki || S.otliv) ? '' : 'none';
+  }
   document.getElementById('nalichnikiOn').addEventListener('change', e=>{
     S.nalichniki = e.target.checked;
-    document.getElementById('nalichnikiColors').style.display = e.target.checked ? '' : 'none';
+    updateNalOtlivColors();
     buildHouse();
   });
   renderSwatches('nalichnikiColors', NALICHNIKI_COLORS, S.nalichnikiColor, (c)=>{S.nalichnikiColor=c;buildHouse()});
   document.getElementById('otlivOn').addEventListener('change', e=>{
     S.otliv = e.target.checked;
+    updateNalOtlivColors();
     buildHouse();
   });
 
