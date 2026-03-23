@@ -1,0 +1,109 @@
+{
+  "date": "2026-03-19",
+  "competitors": [
+    {
+      "id": "kaleva_standard",
+      "name": "Калева Стандарт",
+      "pricePerM2": 14580,
+      "sashExtra": 4000,
+      "mullionExtra": 1200,
+      "note": "Московская 16, реклама от 13000"
+    },
+    {
+      "id": "kaleva_design",
+      "name": "Калева Дизайн",
+      "pricePerM2": 22260,
+      "sashExtra": 5000,
+      "mullionExtra": 1500,
+      "note": "Премиум, реклама от 18700"
+    },
+    {
+      "id": "okno_rehau_brilliant",
+      "name": "О-КНО REHAU Brilliant",
+      "pricePerM2": 6560,
+      "sashExtra": 3500,
+      "mullionExtra": 1000,
+      "note": "o-kno.ru, реклама от 6560/м²"
+    },
+    {
+      "id": "okno_rehau_delight",
+      "name": "О-КНО REHAU Delight",
+      "pricePerM2": 4890,
+      "sashExtra": 3200,
+      "mullionExtra": 900,
+      "note": "o-kno.ru, реклама от 4890/м²"
+    },
+    {
+      "id": "okno_melke70",
+      "name": "О-КНО MELKE Evolution 70",
+      "pricePerM2": 3824,
+      "sashExtra": 3000,
+      "mullionExtra": 800,
+      "note": "o-kno.ru, реклама от 3824/м²"
+    },
+    {
+      "id": "okno_melke60",
+      "name": "О-КНО MELKE Smart 60",
+      "pricePerM2": 2364,
+      "sashExtra": 2800,
+      "mullionExtra": 700,
+      "note": "o-kno.ru, реклама от 2364/м²"
+    },
+    {
+      "id": "okno_kbe_master",
+      "name": "О-КНО KBE Master 70",
+      "pricePerM2": 5202,
+      "sashExtra": 3100,
+      "mullionExtra": 850,
+      "note": "o-kno.ru, реклама от 5202/м²"
+    },
+    {
+      "id": "okno_kbe_master",
+      "name": "О-КНО KBE Master 70",
+      "pricePerM2": 5593,
+      "sashExtra": 3100,
+      "mullionExtra": 850,
+      "note": "o-kno.ru, реклама от 5593/м²"
+    },
+    {
+      "id": "satels_veka",
+      "name": "Сателс Veka Softline",
+      "pricePerM2": 8960,
+      "sashExtra": 3000,
+      "mullionExtra": 800,
+      "note": "satels-okna.ru, калькулятор: 8960₽"
+    },
+    {
+      "id": "oknasvet_veka",
+      "name": "Окна Свет VEKA",
+      "pricePerM2": 3000,
+      "sashExtra": 2500,
+      "mullionExtra": 700,
+      "note": "40-okna.ru, Калужская 36, от 3000/м²"
+    },
+    {
+      "id": "oknasvet_satels",
+      "name": "Окна Свет SATELS",
+      "pricePerM2": 4125,
+      "sashExtra": 2800,
+      "mullionExtra": 750,
+      "note": "40-okna.ru, SATELS Optimum от 4125₽"
+    },
+    {
+      "id": "oknasvet_rehau",
+      "name": "Окна Свет Rehau",
+      "pricePerM2": 3500,
+      "sashExtra": 2700,
+      "mullionExtra": 750,
+      "note": "40-okna.ru, Rehau"
+    },
+    {
+      "id": "mosk71a",
+      "name": "Московская 71А (без бренда)",
+      "pricePerM2": 0,
+      "sashExtra": 0,
+      "mullionExtra": 0,
+      "note": "Нет сайта, тел: +7(953)320-40-80. Цены узнать звонком"
+    }
+  ]
+}

@@ -168,6 +168,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="section-title" style="margin-top:10px">Ламинация (внутри)</div>
       <div class="color-row" id="frameInnerColors"></div>
     </div>
+
+    <!-- Наличники и отлив -->
+    <div class="section">
+      <div class="section-title">Наличники</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer">
+        <input type="checkbox" id="nalichnikiOn"> Фирменные наличники
+      </label>
+      <div class="color-row" id="nalichnikiColors" style="display:none"></div>
+      <div style="margin-top:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="otlivOn"> Отлив
+        </label>
+      </div>
+    </div>
   </div>
 
   <!-- ===== 3D VIEWPORT ===== -->
@@ -223,24 +237,33 @@ const PRICES = {
 };
 
 const ROOF_COLORS = [
-  {name:'Серый графит',color:'#5a5a5a'},
-  {name:'Бордовый',color:'#8b1a2b'},
-  {name:'Зелёный',color:'#2d5a27'},
-  {name:'Коричневый',color:'#5c3a1e'}
+  {name:'Серый графит',color:'#8a8a8a'},
+  {name:'Бордовый',color:'#c03040'},
+  {name:'Зелёный',color:'#4a8a42'},
+  {name:'Коричневый',color:'#8a6040'},
+  {name:'Синий',color:'#3a5a8a'}
 ];
 
 const WALL_SETS = {
   siding:[
-    {name:'Салатовый',color:'#d4e6d4'},{name:'Белый',color:'#f0f0f0'},
-    {name:'Капучино',color:'#c4a882'},{name:'Коричневый',color:'#7a5c3a'},
-    {name:'Светло-серый',color:'#c8c8c8'}
+    {name:'Капучино',color:'#ffffff',tex:'siding1'},
+    {name:'Серый',color:'#ffffff',tex:'siding2'},
+    {name:'Салатовый',color:'#ffffff',tex:'siding3'},
+    {name:'Зелёный',color:'#ffffff',tex:'siding4'}
   ],
   brick:[
-    {name:'Красный',color:'#a83232'},{name:'Песочный',color:'#d4b896'},
-    {name:'Коричневый',color:'#6b3a2a'}
+    {name:'Красный',color:'#ffffff',tex:'brick'},
+    {name:'Песочный',color:'#ffffff',tex:'brick_sand'},
+    {name:'Тёмный',color:'#ffffff',tex:'brick_dark'},
+    {name:'Серый',color:'#ffffff',tex:'brick_gray'},
   ],
   timber:[
-    {name:'Светлый брус',color:'#c9a96e'},{name:'Тёмный брус',color:'#8b6914'}
+    {name:'Светлый брус',color:'#ffffff',tex:'logs5'},
+    {name:'Золотистый',color:'#ffffff',tex:'logs8'},
+    {name:'Старый брус',color:'#ffffff',tex:'logs3'},
+    {name:'Бревно',color:'#ffffff',tex:'logs4'},
+    {name:'Серый брус',color:'#ffffff',tex:'logs7'},
+    {name:'Тёмный брус',color:'#ffffff',tex:'logs10'}
   ]
 };
 
@@ -260,10 +283,11 @@ const FRAME_COLORS = [
 // ============================================================
 const S = {
   sideAC:6000, sideBD:8000, floors:2,
-  roofType:'gable', roofColor:'#5a5a5a',
-  wallMat:'siding', wallColor:'#d4e6d4',
+  roofType:'gable', roofColor:'#ffffff',
+  wallMat:'siding', wallColor:'#ffffff', wallTexKey:'siding1',
   activeSide:null,
   frameOuter:'#f0f0ec', frameInner:'#f0f0ec',
+  nalichniki: false, nalichnikiColor:'#ffffff', otliv: false,
   profiles:['rehau'], thicknesses:[60],
   filling:'double',
   constructions:{} // "A_1_2" => {type:'window', w:1200, h:1400}
@@ -275,7 +299,45 @@ const S = {
 let scene, camera, renderer;
 let allMeshes = [];
 let wallClickMeshes = [];
+
+// Текстуры стен и крыши
+const texLoader = new THREE.TextureLoader();
+const TEX = {};
+function loadTex(name, file){
+  const t = texLoader.load('textures/' + file, ()=>{
+    console.log('Texture loaded:', file);
+    if(scene) buildHouse();
+  }, undefined, (err)=>{
+    console.warn('Texture load failed:', file, err);
+    delete TEX[name];
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.userData_file = file;
+  TEX[name] = t;
+}
+loadTex('siding1', 'sayding_1.jpg');
+loadTex('siding2', 'sayding_2.jpg');
+loadTex('siding3', 'sayding_3.jpg');
+loadTex('siding4', 'sayding_4.jpg');
+loadTex('brick', 'brick-6.jpg');
+loadTex('brick_sand', 'brick-9.jpg');
+loadTex('brick_dark', 'brick-1.jpg');
+loadTex('brick_gray', 'brick-3-2.jpg');
+loadTex('logs3', 'logs-3.jpg');
+loadTex('logs4', 'logs-4.jpg');
+loadTex('logs5', 'logs-5.jpg');
+loadTex('logs7', 'logs-7.jpg');
+loadTex('logs8', 'logs-8.jpg');
+loadTex('logs10', 'logs-10.jpg');
+// roof — текстура не работает на ExtrudeGeometry (UV боковых граней)
 const orbit = {drag:false, theta:Math.PI/4, phi:Math.PI/5, dist:14, tx:0, ty:0, lx:0, ly:0};
+// Размер тайла текстуры для каждого материала (в world units)
+const TEX_TILES = {
+  siding: 2000 * SCALE,  // 2м
+  brick:  1000 * SCALE,  // 1м — мелкий кирпич
+  timber: 2000 * SCALE,  // 2м
+  roof:   1500 * SCALE   // 1.5м
+};
 
 function init3D(){
   const vp = document.getElementById('viewport');
@@ -291,12 +353,12 @@ function init3D(){
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.outputEncoding = THREE.sRGBEncoding;
 
   // Lights
-  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-  const sun = new THREE.DirectionalLight(0xfff5e0, 1.0);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.55);
   sun.position.set(8, 12, 6);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -307,7 +369,7 @@ function init3D(){
   sun.shadow.camera.top = 15;
   sun.shadow.camera.bottom = -15;
   scene.add(sun);
-  scene.add(new THREE.HemisphereLight(0x87ceeb, 0x556b2f, 0.35));
+  scene.add(new THREE.HemisphereLight(0x87ceeb, 0x556b2f, 0.2));
 
   // Ground
   const gnd = new THREE.Mesh(
@@ -380,9 +442,15 @@ function buildHouse(){
   const hd = S.sideBD*SCALE/2;
   const totalH = S.floors * FLOOR_H * SCALE;
 
-  // Wall texture pattern
-  let wallColor = S.wallColor;
-  const wallMat = new THREE.MeshStandardMaterial({color:wallColor, roughness:0.85, metalness:0.02});
+  // Wall texture + color tint
+  const wallTex = TEX[S.wallTexKey];
+  const hasWallTex = wallTex && wallTex.image;
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: S.wallColor,
+    map: hasWallTex ? wallTex.clone() : null,
+    roughness: S.wallMat==='brick' ? 0.9 : 0.75,
+    metalness: 0.02
+  });
 
   // 4 walls
   const walls = [
@@ -413,7 +481,14 @@ function buildHouse(){
     });
 
     if(openings.length===0){
-      // Solid wall
+      // Solid wall — BoxGeometry UV: 0→1
+      if(m.map){
+        m.map = m.map.clone();
+        m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
+        const tt = TEX_TILES[S.wallMat] || TEX_TILES.siding;
+        m.map.repeat.set(wl.scaleX / tt, totalH / tt);
+        m.map.needsUpdate = true;
+      }
       const g = new THREE.BoxGeometry(wl.scaleX, totalH, 0.15);
       const mesh = new THREE.Mesh(g, m);
       mesh.position.set(...wl.pos);
@@ -446,6 +521,14 @@ function buildHouse(){
         shape.holes.push(hole);
       });
 
+      // ExtrudeGeometry UV = координаты шейпа
+      if(m.map){
+        const tt = TEX_TILES[S.wallMat] || TEX_TILES.siding;
+        m.map = m.map.clone();
+        m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
+        m.map.repeat.set(1 / tt, 1 / tt);
+        m.map.needsUpdate = true;
+      }
       const extrudeSettings = {depth:0.15, bevelEnabled:false};
       const g = new THREE.ExtrudeGeometry(shape, extrudeSettings);
       g.translate(0, 0, -0.075);
@@ -581,8 +664,39 @@ function buildConstructions3D(hw, hd, totalH){
       // right
       group.add(makeBox(FRAME_W, ch-FRAME_W*2, FRAME_D, cw/2-FRAME_W/2, 0, 0, fm));
 
-      // Подоконник (отлив снаружи)
-      group.add(makeBox(cw+0.04, 0.01, 0.08, 0, -ch/2-0.005, 0.04, sillMat));
+      // Наличники — объёмная рамка вокруг окна (150мм ширина, 20мм толщина)
+      if(S.nalichniki){
+        const nMat = new THREE.MeshStandardMaterial({color:S.nalichnikiColor, roughness:0.5, metalness:0.02});
+        if(S.nalichnikiColor==='#ffffff') nMat.color = new THREE.Color('#f5f5f5');
+        const NW = 0.15 * SCALE * 1000; // 150мм
+        const ND = 0.02;  // 20мм толщина (выступ наружу)
+        const nz = FRAME_D/2 + ND/2; // перед рамой
+        // верх
+        group.add(makeBox(cw + NW*2, NW, ND, 0, ch/2 + NW/2, nz, nMat));
+        // низ
+        group.add(makeBox(cw + NW*2, NW, ND, 0, -ch/2 - NW/2, nz, nMat));
+        // лево
+        group.add(makeBox(NW, ch, ND, -cw/2 - NW/2, 0, nz, nMat));
+        // право
+        group.add(makeBox(NW, ch, ND, cw/2 + NW/2, 0, nz, nMat));
+      }
+
+      // Отлив — наклонный козырёк под окном
+      if(S.otliv){
+        const oMat = new THREE.MeshStandardMaterial({color:'#c0c0c0', roughness:0.3, metalness:0.5});
+        const oW = cw + 0.06; // чуть шире окна
+        const oD = 0.12;      // глубина отлива
+        const oH = 0.003;     // толщина металла
+        const oGeo = new THREE.BoxGeometry(oW, oH, oD);
+        const oMesh = new THREE.Mesh(oGeo, oMat);
+        oMesh.position.set(0, -ch/2 - 0.01, FRAME_D/2 + oD/2 - 0.01);
+        oMesh.rotation.x = 0.15; // наклон вниз ~8°
+        oMesh.castShadow = true;
+        group.add(oMesh);
+      } else {
+        // Стандартный подоконник
+        group.add(makeBox(cw+0.04, 0.01, 0.08, 0, -ch/2-0.005, 0.04, sillMat));
+      }
 
       // === Створки ===
       let parts = 1;
@@ -709,7 +823,8 @@ function maxSlots(side){
 }
 
 function buildRoof(hw, hd, totalH){
-  const mat = new THREE.MeshStandardMaterial({color:S.roofColor, roughness:0.55, metalness:0.15, side:THREE.DoubleSide});
+  // Крыша без текстуры — metalness даёт металлический блеск
+  const mat = new THREE.MeshStandardMaterial({color:S.roofColor, roughness:0.45, metalness:0.35, side:THREE.DoubleSide});
   const roofH = 1.8;
 
   if(S.roofType==='gable'){
@@ -719,13 +834,20 @@ function buildRoof(hw, hd, totalH){
     shape.lineTo(hw+0.15, 0);
     shape.closePath();
     const geo = new THREE.ExtrudeGeometry(shape, {depth:hd*2+0.3, bevelEnabled:false});
+    geo.computeVertexNormals();
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(0, totalH, -hd-0.15);
     mesh.castShadow = true;
     scene.add(mesh); allMeshes.push(mesh);
 
-    // Gables (фронтоны)
-    const gMat = new THREE.MeshStandardMaterial({color:S.wallColor, roughness:0.85});
+    // Gables (фронтоны) — текстура стен
+    const gableTex = (TEX[S.wallTexKey] && TEX[S.wallTexKey].image) ? TEX[S.wallTexKey].clone() : null;
+    if(gableTex){
+      gableTex.wrapS = gableTex.wrapT = THREE.RepeatWrapping;
+      const gtt = TEX_TILES[S.wallMat] || TEX_TILES.siding;
+      gableTex.repeat.set(1 / gtt, 1 / gtt);
+    }
+    const gMat = new THREE.MeshStandardMaterial({color:S.wallColor, map:gableTex, roughness:0.85, side:THREE.DoubleSide});
     [-hd-0.02, hd+0.02].forEach((z,i)=>{
       const gs = new THREE.Shape();
       gs.moveTo(-hw, 0); gs.lineTo(0, roofH); gs.lineTo(hw, 0); gs.closePath();
@@ -774,7 +896,14 @@ function buildRoof(hw, hd, totalH){
         3,0,4           // left triangle (D)
       ];
     }
+    // UV на основе xz координат для текстурирования
+    const uvs = new Float32Array(verts.length / 3 * 2);
+    for(let i = 0; i < verts.length / 3; i++){
+      uvs[i*2] = verts[i*3] / TEX_TILES.roof;
+      uvs[i*2+1] = verts[i*3+2] / TEX_TILES.roof;
+    }
     geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(indices);
     geo.computeVertexNormals();
     const mesh = new THREE.Mesh(geo, mat);
@@ -1164,10 +1293,11 @@ function initUI(){
   document.getElementById('wallMaterial').addEventListener('change', e=>{
     S.wallMat=e.target.value;
     const set=WALL_SETS[S.wallMat]; S.wallColor=set[0].color;
-    renderSwatches('wallColors',set,S.wallColor, c=>{S.wallColor=c;buildHouse()});
+    S.wallTexKey = set[0].tex || S.wallMat;
+    renderSwatches('wallColors',set,S.wallColor, (c,item)=>{S.wallColor=c; S.wallTexKey=item.tex||S.wallMat; buildHouse()});
     buildHouse();
   });
-  renderSwatches('wallColors', WALL_SETS.siding, S.wallColor, c=>{S.wallColor=c;buildHouse()});
+  renderSwatches('wallColors', WALL_SETS.siding, S.wallColor, (c,item)=>{S.wallColor=c; S.wallTexKey=item.tex||S.wallMat; buildHouse()});
 
   // Profiles
   const pg=document.getElementById('profileGroup');
@@ -1194,6 +1324,21 @@ function initUI(){
   // Frame colors
   renderSwatches('frameOuterColors', FRAME_COLORS, S.frameOuter, c=>{S.frameOuter=c;buildHouse()});
   renderSwatches('frameInnerColors', FRAME_COLORS, S.frameInner, c=>{S.frameInner=c;buildHouse()});
+
+  // Наличники
+  const NALICHNIKI_COLORS = [
+    {name:'Белый',color:'#ffffff'},{name:'Коричневый',color:'#5a3a1e'},{name:'Серый',color:'#808080'}
+  ];
+  document.getElementById('nalichnikiOn').addEventListener('change', e=>{
+    S.nalichniki = e.target.checked;
+    document.getElementById('nalichnikiColors').style.display = e.target.checked ? '' : 'none';
+    buildHouse();
+  });
+  renderSwatches('nalichnikiColors', NALICHNIKI_COLORS, S.nalichnikiColor, (c)=>{S.nalichnikiColor=c;buildHouse()});
+  document.getElementById('otlivOn').addEventListener('change', e=>{
+    S.otliv = e.target.checked;
+    buildHouse();
+  });
 
   // Side tabs
   document.querySelectorAll('.side-tab').forEach(t=>t.addEventListener('click', ()=>selectSide(t.dataset.side)));
@@ -1228,11 +1373,16 @@ function renderSwatches(id, items, active, onChange){
     sw.className='swatch'+(item.color===active?' active':'');
     sw.style.background=item.color;
     sw.title=item.name;
-    if(item.color==='#f0f0ec') sw.style.border='2px solid #ccc';
+    if(item.color==='#f0f0ec'||item.color==='#ffffff') sw.style.border='2px solid #ccc';
+    // Для текстурных свотчей показываем превью текстуры
+    if(item.tex && TEX[item.tex]){
+      sw.style.backgroundImage='url(textures/'+TEX[item.tex].userData_file+')';
+      sw.style.backgroundSize='cover';
+    }
     sw.addEventListener('click', ()=>{
       box.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
       sw.classList.add('active');
-      onChange(item.color);
+      onChange(item.color, item);
     });
     box.appendChild(sw);
   });

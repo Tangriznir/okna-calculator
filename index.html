@@ -1,0 +1,2288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор окон — Сервис Центр Окна и Двери</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f2f5;color:#333}
+.app{max-width:1440px;margin:0 auto;padding:20px}
+.tabs{display:flex;gap:2px}
+.tab{padding:12px 24px;border:none;background:#e0e0e0;cursor:pointer;border-radius:8px 8px 0 0;font-size:15px;transition:all .2s}
+.tab:hover{background:#d0d0d0}
+.tab.active{background:#fff;font-weight:600;box-shadow:0 -2px 4px rgba(0,0,0,.05)}
+.tab-content{display:none;background:#fff;border-radius:0 8px 8px 8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.tab-content.active{display:block}
+.layout{display:flex;gap:24px;align-items:flex-start}
+.canvas-wrap{flex:1;position:relative;min-width:0}
+.controls{width:340px;flex-shrink:0;max-height:85vh;overflow-y:auto}
+canvas{display:block;border:1px solid #e5e5e5;border-radius:4px;background:#fff}
+.ctx-menu{position:fixed;background:#fff;border:1px solid #d0d0d0;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.15);padding:4px 0;z-index:1000;min-width:240px}
+.ctx-menu.hidden{display:none}
+.ctx-menu-item{padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:14px;transition:background .15s}
+.ctx-menu-item:hover{background:#f0f4ff}
+.ctx-menu-item .icon{width:20px;text-align:center;font-size:14px;color:#555}
+.ctx-menu-divider{height:1px;background:#e8e8e8;margin:4px 0}
+.ctx-menu-header{padding:6px 16px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px}
+.dim-input{position:absolute;background:#ff8c00;color:#fff;border:2px solid #e07000;border-radius:4px;padding:4px 8px;font-size:14px;font-weight:700;text-align:center;width:80px;z-index:100;outline:none}
+.dim-input.hidden{display:none}
+.dim-input:focus{box-shadow:0 0 0 3px rgba(255,140,0,.3)}
+.sash-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:12px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:1001;min-width:360px}
+.sash-dialog.hidden{display:none}
+.sash-dialog h4{margin-bottom:16px;font-size:18px}
+.sash-dialog .form-group{margin-bottom:14px}
+.sash-dialog .form-group>label:first-child{display:block;font-weight:600;margin-bottom:6px;font-size:13px;color:#666}
+.radio-group{display:flex;flex-direction:column;gap:6px}
+.radio-group label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.sash-dialog select{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px}
+.dialog-actions{display:flex;gap:8px;margin-top:20px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1000}
+.overlay.hidden{display:none}
+.control-section{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #eee}
+.control-section:last-child{border-bottom:none}
+.control-section h3{font-size:14px;margin-bottom:10px;color:#333}
+input[name="blindColor"]:checked+span,input[name="rollColor"]:checked+span{border-color:#E8521A!important;box-shadow:0 0 0 2px #E8521A40}
+.form-row{margin-bottom:8px}
+.form-row label{display:block;font-size:11px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.form-row select,.form-row input[type="number"]{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px}
+.form-row .inline{display:flex;gap:8px;align-items:center}
+.form-row .inline select,.form-row .inline input{flex:1}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.btn-primary{background:#1a5cb8;color:#fff}
+.btn-primary:hover{background:#154a96}
+.btn-secondary{background:#e8e8e8;color:#333}
+.btn-secondary:hover{background:#d8d8d8}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-block{display:block;width:100%}
+.info-box{background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:10px}
+.info-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #eee}
+.info-row:last-child{border-bottom:none}
+.info-row .label{color:#888}
+.info-row .value{font-weight:600}
+.price-list{max-height:200px;overflow-y:auto;margin-top:8px}
+.price-item{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border:1px solid #eee;border-radius:6px;margin-bottom:3px;font-size:11px}
+.price-item .desc{flex:1}
+.price-item .price{font-weight:700;color:#1a5cb8;white-space:nowrap;margin-left:8px}
+.price-item .del{cursor:pointer;color:#999;margin-left:8px}
+.price-item .del:hover{color:#dc3545}
+.price-display{background:linear-gradient(135deg,#1a5cb8,#2d7de0);border-radius:12px;padding:20px;color:#fff;margin-bottom:16px}
+.price-display .final{font-size:28px;font-weight:700}
+.price-display .breakdown{margin-top:10px;font-size:12px;opacity:.8}
+.price-display .breakdown div{padding:2px 0}
+.comp-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #ffe0b2;font-size:12px}
+.comp-row:last-child{border-bottom:none}
+.comp-row .comp-name{color:#555;flex:1}
+.comp-row .comp-price{font-weight:700;white-space:nowrap;margin-left:8px}
+.comp-row .comp-price.cheaper{color:#2a9d2a}
+.comp-row .comp-price.expensive{color:#dc3545}
+.comp-row .comp-diff{font-size:10px;color:#888;margin-left:4px;white-space:nowrap}
+.comp-input-row{display:flex;gap:6px;align-items:center;margin-bottom:4px;font-size:11px}
+.comp-input-row label{flex:1;color:#555}
+.comp-input-row input{width:80px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;font-size:11px;text-align:right}
+</style>
+</head>
+<body>
+<!-- Баннер REHAU — виден только на сайте -->
+<div id="rehauBanner" style="display:none">
+  <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:32px 24px;text-align:center;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;opacity:.05;background:repeating-linear-gradient(45deg,transparent,transparent 40px,#fff 40px,#fff 41px)"></div>
+    <div style="position:relative;max-width:700px;margin:0 auto">
+      <div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#f59e0b;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);padding:4px 16px;border-radius:20px;margin-bottom:12px">Официальный партнёр</div>
+      <div style="font-size:clamp(2rem,5vw,3rem);font-weight:900;color:#fff;letter-spacing:-.03em;line-height:1.1;margin-bottom:4px">REHAU</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.4);letter-spacing:.05em;margin-bottom:12px">Европейский лидер по производству ПВХ</div>
+      <div style="font-size:15px;color:rgba(255,255,255,.6);line-height:1.5;max-width:480px;margin:0 auto 16px">Рассчитайте стоимость окон премиум-класса за 30 секунд. Точная цена без посредников</div>
+      <div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,.5)"><span style="color:#22c55e;font-weight:700">&#10003;</span> Гарантия 40 лет</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,.5)"><span style="color:#22c55e;font-weight:700">&#10003;</span> Немецкий профиль</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,.5)"><span style="color:#22c55e;font-weight:700">&#10003;</span> Монтаж по ГОСТ</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="app">
+  <div class="tabs">
+    <button class="tab active" data-tab="training">Обучение</button>
+    <button class="tab" data-tab="calculator">Калькулятор</button>
+  </div>
+
+  <div id="tab-training" class="tab-content active">
+    <div class="layout">
+      <div class="canvas-wrap">
+        <canvas id="canvas1" width="760" height="680"></canvas>
+        <input id="dimInput1" class="dim-input hidden" type="number" step="10" min="100" max="5000">
+      </div>
+      <div class="controls">
+        <div class="control-section">
+          <h3>Конфигурация</h3>
+          <div class="info-box" id="configInfo1"></div>
+          <div class="form-row"><label>Профиль</label>
+            <select id="profile1">
+              <option value="Brusbox 60" selected>Brusbox 60 (3 кам, 60мм)</option>
+            </select></div>
+          <div class="form-row"><label>Стеклопакет</label>
+            <select id="glazing1">
+              <option value="4м1-16-4м1">4м1-16-4м1 (однокамерный)</option>
+              <option value="4м1-10-4м1-10-4м1">4м1-10-4м1-10-4м1 (двухкамерный)</option>
+              <option value="4м1-16-4м1(i)">4м1-16-4м1(i) (однокам. энергосбер.)</option>
+            </select></div>
+        </div>
+        <div class="control-section">
+          <h3>Цены компонентов</h3>
+          <div style="font-size:11px;color:#888;margin-bottom:8px">Заполни один раз — всё считается автоматически</div>
+          <details open><summary style="cursor:pointer;font-weight:600;font-size:12px;margin-bottom:6px">Базовая цена за м² (глухое)</summary>
+            <div id="basePriceTable" style="font-size:12px"></div>
+          </details>
+          <details><summary style="cursor:pointer;font-weight:600;font-size:12px;margin:8px 0 6px">Створки (доплата за шт.)</summary>
+            <div class="form-row"><label>Поворотно-откидная</label><input type="number" class="cp" data-key="sash_tiltturn" step="100" placeholder="0"></div>
+          </details>
+          <details><summary style="cursor:pointer;font-weight:600;font-size:12px;margin:8px 0 6px">Прочее (доплата за шт.)</summary>
+            <div class="form-row"><label>Импост</label><input type="number" class="cp" data-key="mullion" step="50" placeholder="0"></div>
+            <div class="form-row"><label>Москитная сетка</label><input type="number" class="cp" data-key="mosquito" step="50" placeholder="0"></div>
+          </details>
+          <details><summary style="cursor:pointer;font-weight:600;font-size:12px;margin:8px 0 6px">Отделка и работы (для калькулятора клиента)</summary>
+            <div class="form-row"><label>Откосы (руб./п.м.) — 2 высоты + 1 ширина</label><input type="number" class="cp" data-key="slopes_pm" step="50" placeholder="0"></div>
+            <div class="form-row"><label>Подоконник (руб./п.м.) — 1 ширина</label><input type="number" class="cp" data-key="sill_pm" step="50" placeholder="0"></div>
+            <div class="form-row"><label>Отлив (руб./п.м.) — 1 ширина</label><input type="number" class="cp" data-key="drip_pm" step="50" placeholder="0"></div>
+            <div class="form-row"><label>Установка (руб./м²)</label><input type="number" class="cp" data-key="install_pm2" step="50" placeholder="0"></div>
+            <div class="form-row"><label>Доставка (руб. фикс.)</label><input type="number" class="cp" data-key="delivery" step="100" placeholder="0"></div>
+          </details>
+        </div>
+        <div class="control-section">
+          <h3>Наценка для клиента</h3>
+          <div class="form-row">
+            <div class="inline">
+              <input type="number" id="markupValue" value="30" min="0" onchange="saveSettings()">
+              <select id="markupType" onchange="saveSettings()"><option value="percent">%</option><option value="fixed">руб./окно</option></select>
+            </div></div>
+        </div>
+        <div class="control-section">
+          <button class="btn btn-block" onclick="calcPrices()" style="background:#E8521A;color:#fff;font-size:15px;padding:12px 16px;margin-bottom:12px">Рассчитать</button>
+          <div class="info-box" id="calcResult" style="display:none">
+            <div class="info-row"><span class="label">Цена производства</span><span class="value" id="prodPrice">—</span></div>
+            <div class="info-row" id="markupRow" style="display:none"><span class="label">Наценка</span><span class="value" id="markupDisplay" style="color:#E8521A">—</span></div>
+            <div class="info-row" id="clientRow" style="display:none"><span class="label">Цена для клиента</span><span class="value" id="clientPrice" style="font-size:15px">—</span></div>
+            <div class="info-row" id="profitRow" style="display:none"><span class="label">Прибыль</span><span class="value" id="profitValue" style="color:#2a9d2a">—</span></div>
+          </div>
+          <!-- Блок сравнения с конкурентами -->
+          <div id="competitorBlock" style="display:none;margin-top:12px">
+            <div style="background:#fff3e0;border:1px solid #ffcc02;border-radius:8px;padding:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <h4 style="font-size:13px;margin:0;color:#e65100">Цены конкурентов</h4>
+                <button class="btn btn-sm" onclick="toggleCompetitorEdit()" style="font-size:10px;padding:2px 8px;background:#fff3e0;border:1px solid #ffcc02">&#9998;</button>
+              </div>
+              <div id="competitorPrices" style="font-size:12px"></div>
+              <div id="competitorEdit" style="display:none;margin-top:8px;border-top:1px solid #ffcc02;padding-top:8px">
+                <div style="font-size:11px;color:#888;margin-bottom:6px">Цены за м² (обновляй при необходимости)</div>
+                <div id="competitorInputs"></div>
+                <button class="btn btn-sm" onclick="saveCompetitorPrices()" style="margin-top:6px;background:#e65100;color:#fff;font-size:11px">Сохранить</button>
+                <button class="btn btn-sm" onclick="runCompetitorParse()" style="margin-top:6px;background:#1a5cb8;color:#fff;font-size:11px;margin-left:4px">Автопарсинг</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm btn-block" onclick="resetDesigner(1)">Сбросить конструкцию</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-calculator" class="tab-content">
+    <div style="max-width:700px;margin:0 auto">
+      <div class="control-section">
+        <h3>Тип окна</h3>
+        <div id="typeCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px"></div>
+      </div>
+      <div id="sashSelector" style="display:none" class="control-section">
+        <h3>Количество створок</h3>
+        <div class="form-row"><select id="cSashes" onchange="selectedSashes=parseInt(this.value);updateMosquitoSelector();drawPreview()"><option value="1">1 шт.</option></select></div>
+      </div>
+      <div id="winPreview" style="text-align:center;margin:12px 0"></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px" class="control-section">
+          <h3>Размеры (мм)</h3>
+          <div id="dimsNormal">
+            <div class="form-row"><label>Ширина</label><input type="number" id="cWidth" value="1400" step="10" min="400" max="3000" onchange="drawPreview()"></div>
+            <div class="form-row"><label>Высота</label><input type="number" id="cHeight" value="1400" step="10" min="400" max="2500" onchange="drawPreview()"></div>
+          </div>
+          <div id="dimsBalcony" style="display:none">
+            <div class="form-row"><label>Ширина окна</label><input type="number" id="cBwinW" value="1400" step="10" min="400" max="3000" onchange="drawPreview()"></div>
+            <div class="form-row"><label>Высота окна</label><input type="number" id="cBwinH" value="1400" step="10" min="400" max="2500" onchange="drawPreview()"></div>
+            <div class="form-row"><label>Ширина двери</label><input type="number" id="cBdoorW" value="700" step="10" min="400" max="1200" onchange="drawPreview()"></div>
+            <div class="form-row"><label>Высота двери</label><input type="number" id="cBdoorH" value="2100" step="10" min="1800" max="2500" onchange="drawPreview()"></div>
+          </div>
+          <div id="dimWarning" style="display:none;font-size:12px;color:#999;margin-top:4px"></div>
+        </div>
+      </div>
+      <select id="cProfile" style="display:none"><option value="Brusbox 60" selected>Brusbox 60</option></select>
+      <div class="control-section">
+        <h3>Цвет стены</h3>
+        <div class="form-row"><select id="cWallColor" onchange="drawPreview()">
+          <option value="#f5f0e8">Слоновая кость</option>
+          <option value="#faf6f0">Белый жемчуг</option>
+          <option value="#f0ece4">Кремовый</option>
+          <option value="#e8e4d8">Тёплый бежевый</option>
+          <option value="#d6cfc4">Капучино</option>
+          <option value="#e0ddd6">Пепельный</option>
+          <option value="#dce4dc">Мятный</option>
+          <option value="#d8dce8">Лавандовый</option>
+          <option value="#dce8e8">Голубой лёд</option>
+          <option value="#e8e0d0">Песочный</option>
+          <option value="#f0e0d0">Персиковый</option>
+          <option value="#e0d8c8">Льняной</option>
+        </select></div>
+      </div>
+      <div class="control-section">
+        <h3>Ламинация профиля</h3>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:120px">
+            <label style="font-size:12px;color:#888">Снаружи</label>
+            <div class="form-row"><select id="cLamOuter" onchange="drawPreview()" style="margin-top:4px">
+              <option value="#f0f0ec" selected>Белая основа</option>
+              <option value="#c8963c">Золотой дуб</option>
+              <option value="#6b2226">Махагон</option>
+              <option value="#d4a76a">Светлый дуб</option>
+              <option value="#4a3728">Морёный дуб ST-F</option>
+              <option value="#6b4226">Орех V</option>
+              <option value="#3d2b1f">Тёмный дуб FL-F1</option>
+              <option value="#b08040">Натуральный дуб FL-G</option>
+              <option value="#3b1015">Чёрная вишня</option>
+              <option value="#7b3f00">Сапели (заказ)</option>
+              <option value="#8b7355">Дуб ST-G (заказ)</option>
+              <option value="#8b6914">Рустикальный дуб 1</option>
+              <option value="#5c3317">Шоколадно-коричневый 8875</option>
+              <option value="#2c1608">Чёрно-коричневый 8518</option>
+              <option value="#7b6b4e">Горная сосна (заказ)</option>
+              <option value="#6b4423">Коричневый каштан 8099 (заказ)</option>
+            </select></div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label style="font-size:12px;color:#888">Внутри</label>
+            <div class="form-row"><select id="cLamInner" onchange="drawPreview()" style="margin-top:4px">
+              <option value="#f0f0ec" selected>Белая основа</option>
+              <option value="#c8963c">Золотой дуб</option>
+              <option value="#6b2226">Махагон</option>
+              <option value="#d4a76a">Светлый дуб</option>
+              <option value="#4a3728">Морёный дуб ST-F</option>
+              <option value="#6b4226">Орех V</option>
+              <option value="#3d2b1f">Тёмный дуб FL-F1</option>
+              <option value="#b08040">Натуральный дуб FL-G</option>
+              <option value="#3b1015">Чёрная вишня</option>
+              <option value="#7b3f00">Сапели (заказ)</option>
+              <option value="#8b7355">Дуб ST-G (заказ)</option>
+              <option value="#8b6914">Рустикальный дуб 1</option>
+              <option value="#5c3317">Шоколадно-коричневый 8875</option>
+              <option value="#2c1608">Чёрно-коричневый 8518</option>
+              <option value="#7b6b4e">Горная сосна (заказ)</option>
+              <option value="#6b4423">Коричневый каштан 8099 (заказ)</option>
+            </select></div>
+          </div>
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Стеклопакет</h3>
+        <div class="form-row"><select id="cGlazing" onchange="drawPreview()">
+          <option value="single">Однокамерный</option>
+          <option value="double" selected>Двухкамерный</option>
+          <option value="energy">Энергосберегающий</option>
+        </select></div>
+      </div>
+      <div class="control-section">
+        <h3>Отделка</h3>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="cSlopes" onchange="drawPreview()"> Откосы</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="cSill" onchange="document.getElementById('sillColorRow').style.display=this.checked?'':'none';drawPreview()"> Подоконник</label>
+        <div id="sillColorRow" style="display:none;margin-left:28px;margin-top:2px">
+          <select id="cSillColor" onchange="drawPreview()" style="font-size:13px;padding:4px 8px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#333;outline:none">
+            <option value="#ffffff" data-key="" selected>Белый</option>
+            <option value="#d4c4a0" data-key="windowsil_komfort_beige_150_1000">Бежевый</option>
+            <option value="#b8860b" data-key="windowsil_komfort_oak_150_1000">Дуб</option>
+            <option value="#808080" data-key="windowsil_komfort_grey_150_1000">Серый</option>
+            <option value="#5c3a1e" data-key="windowsil_komfort_nut_150_1000">Орех</option>
+          </select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="cDrip" onchange="drawPreview()"> Отлив</label>
+      </div>
+      <div id="mosquitoSection" class="control-section" style="display:none">
+        <h3>Москитная сетка</h3>
+        <div class="form-row"><select id="cMosquito" onchange="drawPreview()"><option value="0">Нет</option></select></div>
+      </div>
+      <div id="blindsSection" class="control-section" style="display:none">
+        <h3>Жалюзи горизонтальные</h3>
+        <div class="form-row"><select id="cBlinds" onchange="updateBlindsSelector();drawPreview()"><option value="0">Нет</option></select></div>
+        <div id="blindsColorRow" style="display:none;margin-top:6px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="blindsColors">
+            <label style="cursor:pointer" title="Белый"><input type="radio" name="blindColor" value="#ffffff" checked style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#ffffff;border:2px solid #ccc;transition:all .2s"></span></label>
+          </div>
+        </div>
+      </div>
+      <div id="rollSection" class="control-section" style="display:none">
+        <h3>Рулонные шторы</h3>
+        <div class="form-row"><select id="cRolls" onchange="updateBlindsSelector();drawPreview()"><option value="0">Нет</option></select></div>
+        <div id="rollsColorRow" style="display:none;margin-top:6px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="rollsColors">
+            <label style="cursor:pointer" title="Белый"><input type="radio" name="rollColor" value="white" data-color="#ffffff" checked onchange="drawPreview()" style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#ffffff;border:2px solid #ccc;transition:all .2s"></span></label>
+            <label style="cursor:pointer" title="Блюз 29 (бежевый)"><input type="radio" name="rollColor" value="blues29" data-color="#c4a882" onchange="drawPreview()" style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#c4a882;border:2px solid #ccc;transition:all .2s"></span></label>
+            <label style="cursor:pointer" title="Атлантик 88 (блэкаут)"><input type="radio" name="rollColor" value="atlantic_bo_88" data-color="#9eaeb8" data-blackout="1" onchange="drawPreview()" style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#9eaeb8;border:2px solid #ccc;transition:all .2s"></span></label>
+            <label style="cursor:pointer" title="Эко Блю 94"><input type="radio" name="rollColor" value="eco_blue_94" data-color="#1f6085" onchange="drawPreview()" style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#1f6085;border:2px solid #ccc;transition:all .2s"></span></label>
+            <label style="cursor:pointer" title="Айс 97"><input type="radio" name="rollColor" value="ice_97" data-color="#c9a3d4" onchange="drawPreview()" style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#c9a3d4;border:2px solid #ccc;transition:all .2s"></span></label>
+            <label style="cursor:pointer" title="Тефи 250 0836 графит"><input type="radio" name="rollColor" value="tefi_250_0836_grafit" data-color="#4a4a4a" onchange="drawPreview()" style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#4a4a4a;border:2px solid #ccc;transition:all .2s"></span></label>
+            <label style="cursor:pointer" title="Триумф 07 абрикос (блэкаут)"><input type="radio" name="rollColor" value="triumf_07_bo_abrikos" data-color="#e2c4a8" data-blackout="1" onchange="drawPreview()" style="display:none"><span style="display:block;width:28px;height:28px;border-radius:4px;background:#e2c4a8;border:2px solid #ccc;transition:all .2s"></span></label>
+          </div>
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Работы</h3>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="cInstall" onchange="document.getElementById('cDelivery').checked=this.checked;drawPreview()"> Установка</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="cDelivery" onchange="document.getElementById('cInstall').checked=this.checked;drawPreview()"> Доставка</label>
+      </div>
+      <div id="clientBreakdown" style="margin-bottom:8px"></div>
+      <button class="btn btn-block" id="orderBtn" onclick="showOrderForm()" style="background:#E8521A;color:#fff;font-size:16px;padding:14px 16px;margin:12px 0;display:none">Оставить заявку</button>
+      <div id="clientResult" class="price-display">
+        <div class="final" id="clientTotal">—</div>
+      </div>
+      <p style="font-size:13px;color:#666;line-height:1.6;margin-top:12px">Уважаемые клиенты, цена актуальна на момент публикации и указана с максимальной скидкой. Если у Вас возникнут вопросы, нужно посчитать заказ индивидуально или с другой комплектацией, то Вы можете связаться с нами нажав кнопку «Оставить заявку». Ответим на все интересующие вопросы и предоставим самые выгодные условия.</p>
+    </div>
+  </div>
+</div>
+
+<div id="ctxMenu" class="ctx-menu hidden"></div>
+<div id="overlay" class="overlay hidden" onclick="closeSashDialog()"></div>
+<div id="sashDialog" class="sash-dialog hidden">
+  <h4>Настройка створки</h4>
+  <div class="form-group"><label>Направление открывания</label>
+    <div class="radio-group">
+      <label><input type="radio" name="sashDir" value="left" checked> Левое (ручка справа)</label>
+      <label><input type="radio" name="sashDir" value="right"> Правое (ручка слева)</label>
+    </div></div>
+  <input type="hidden" name="sashType" value="tilt-turn">
+  <input type="hidden" id="sashHardware" value="Vorne">
+  <div class="form-group"><label>Цвет ручки</label>
+    <select id="sashHandleColor"></select></div>
+  <div class="dialog-actions">
+    <button class="btn btn-primary" onclick="applySash()">Применить</button>
+    <button class="btn btn-secondary" onclick="closeSashDialog()">Отмена</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const FW = 45, MW = 50, SFW = 44, SASH_OVR = 5; // sash overlap onto frame
+
+const HANDLE_COLORS = [
+  {id:'white',name:'Белая',fill:'#f5f5f5',stroke:'#bbb'},
+  {id:'brown',name:'Коричневая',fill:'#5c3a1e',stroke:'#3a200e'},
+  {id:'gold',name:'Золотая',fill:'#daa520',stroke:'#b8860b'},
+  {id:'bronze',name:'Бронзовая',fill:'#cd7f32',stroke:'#a06020'},
+  {id:'titan',name:'Титан',fill:'#878681',stroke:'#6b6b60'},
+  {id:'silver',name:'Серебро',fill:'#c0c0c0',stroke:'#909090'},
+];
+
+const LAMS = [
+  {name:'Белая основа',color:'#f0f0ec'},
+  {name:'Золотой дуб',color:'#c8963c'},
+  {name:'Махагон',color:'#6b2226'},
+  {name:'Светлый дуб',color:'#d4a76a'},
+  {name:'Морёный дуб ST-F',color:'#4a3728'},
+  {name:'Орех V',color:'#6b4226'},
+  {name:'Тёмный дуб FL-F1',color:'#3d2b1f'},
+  {name:'Натуральный дуб FL-G',color:'#b08040'},
+  {name:'Чёрная вишня',color:'#3b1015'},
+  {name:'Сапели (заказ)',color:'#7b3f00'},
+  {name:'Дуб ST-G (заказ)',color:'#8b7355'},
+  {name:'Рустикальный дуб 1',color:'#8b6914'},
+  {name:'Шоколадно-коричневый 8875',color:'#5c3317'},
+  {name:'Чёрно-коричневый 8518',color:'#2c1608'},
+  {name:'Горная сосна (заказ)',color:'#7b6b4e'},
+  {name:'Коричневый каштан 8099 (заказ)',color:'#6b4423'},
+];
+
+function glassCol(f){
+  if(f.includes('(i)')&&f.includes('10-4м1-10'))return'#7888d8';
+  if(f.includes('(i)'))return'#9898e0';
+  if(f.includes('10-4м1-10'))return'#5cc8c8';
+  return'#80e8e8';
+}
+function glassBrd(f){
+  if(f.includes('(i)'))return'#6868b0';
+  if(f.includes('10-4м1-10'))return'#3ca0a0';
+  return'#4cb8b8';
+}
+function dk(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgb(${Math.round(r*(1-a))},${Math.round(g*(1-a))},${Math.round(b*(1-a))})`;}
+
+// ============================================================
+// WINDOW DESIGNER
+// ============================================================
+let activeDesigner = null;
+
+class WindowDesigner {
+  constructor(canvasId, dimInputId, configInfoId) {
+    this.canvas = document.getElementById(canvasId);
+    this.ctx = this.canvas.getContext('2d');
+    this.dimInput = document.getElementById(dimInputId);
+    this.configInfoEl = document.getElementById(configInfoId);
+    this.width = 1000; this.height = 1000;
+    this.root = {type:'leaf',sash:null,mosquito:null,filling:null};
+    this.sections = [];
+    this.margin = {top:50,right:90,bottom:100,left:80};
+    this.scale=1; this.ox=0; this.oy=0;
+    this.selectedPanes = [];
+    this.selectedMullion = null; // split node reference
+    this.editingDim = null;
+    this.dimRegions = []; this.paneRegions = []; this.mullionRegions = [];
+    this.profile = 'Brusbox 60';
+    this.glazingFormula = '4м1-16-4м1';
+    this.lamInner = '#f0f0ec'; this.lamOuter = '#f0f0ec';
+    this.onConfigChange = null; this.onReset = null;
+    this._computeScale(); this._setupEvents();
+    this.computeLayout(); this.render(); this.updateConfigInfo();
+  }
+
+  mx(mm){return this.ox+mm*this.scale;} my(mm){return this.oy+mm*this.scale;} ms(mm){return mm*this.scale;}
+  _computeScale(){
+    const dw=this.canvas.width-this.margin.left-this.margin.right;
+    const dh=this.canvas.height-this.margin.top-this.margin.bottom;
+    this.scale=Math.min(dw/this.width,dh/this.height);
+    this.ox=this.margin.left+(dw-this.width*this.scale)/2;
+    this.oy=this.margin.top+(dh-this.height*this.scale)/2;
+  }
+
+  // Frame color from inner lamination
+  _fc(){return this.lamInner;} _fb(){return dk(this.lamInner,.25);} _fm(){return dk(this.lamInner,.15);}
+
+  // Layout
+  computeLayout(){
+    this.sections=[];
+    this._cn(this.root,{x:FW,y:FW,w:this.width-2*FW,h:this.height-2*FW});
+  }
+  _cn(n,a){
+    if(n.type==='leaf'){n.bounds={...a};this.sections.push(n);return;}
+    const{direction:d,position:p}=n,mw=MW;
+    if(d==='v'){
+      n.mullionBounds={x:p-mw/2,y:a.y,w:mw,h:a.h};
+      this._cn(n.children[0],{x:a.x,y:a.y,w:p-mw/2-a.x,h:a.h});
+      this._cn(n.children[1],{x:p+mw/2,y:a.y,w:(a.x+a.w)-(p+mw/2),h:a.h});
+    }else{
+      n.mullionBounds={x:a.x,y:p-mw/2,w:a.w,h:mw};
+      this._cn(n.children[0],{x:a.x,y:a.y,w:a.w,h:p-mw/2-a.y});
+      this._cn(n.children[1],{x:a.x,y:p+mw/2,w:a.w,h:(a.y+a.h)-(p+mw/2)});
+    }
+  }
+
+  // ========== RENDERING ==========
+  render(){
+    const c=this.ctx; c.clearRect(0,0,this.canvas.width,this.canvas.height);
+    this.paneRegions=[]; this.dimRegions=[]; this.mullionRegions=[];
+    // 1. Glass
+    for(const s of this.sections) this._drawGlass(s);
+    // 2. Outer frame
+    this._drawFrame();
+    // 3. Mullions
+    this._drawMullions(this.root);
+    // 4. Sash (with overlap onto frame, drawn on top)
+    for(const s of this.sections) if(s.sash) this._drawSash(s);
+    // 5. Mosquito grids
+    for(const s of this.sections) if(s.mosquito&&s.sash) this._drawMosqGrid(s);
+    // 6. Selection hatches
+    for(const s of this.selectedPanes) this._drawHatch(s.bounds);
+    if(this.selectedMullion) this._drawHatch(this.selectedMullion.mullionBounds);
+    // 7. Labels
+    for(const s of this.sections) this._drawLabel(s);
+    // 8. Mosquito badge
+    for(const s of this.sections) if(s.mosquito) this._drawMosBadge(s);
+    // 9. Sill
+    this._drawSill();
+    // 10. Dims
+    this._drawDims();
+  }
+
+  _drawFP(pts){
+    const c=this.ctx; c.beginPath();
+    c.moveTo(this.mx(pts[0][0]),this.my(pts[0][1]));
+    for(let i=1;i<pts.length;i++) c.lineTo(this.mx(pts[i][0]),this.my(pts[i][1]));
+    c.closePath(); c.fillStyle=this._fc(); c.fill(); c.strokeStyle=this._fb(); c.lineWidth=1; c.stroke();
+  }
+  _drawFrame(){
+    const w=this.width,h=this.height,f=FW;
+    this._drawFP([[0,0],[w,0],[w-f,f],[f,f]]);
+    this._drawFP([[w,0],[w,h],[w-f,h-f],[w-f,f]]);
+    this._drawFP([[w,h],[0,h],[f,h-f],[w-f,h-f]]);
+    this._drawFP([[0,h],[0,0],[f,f],[f,h-f]]);
+    const c=this.ctx; c.strokeStyle=this._fm(); c.lineWidth=1;
+    [[0,0,f,f],[w,0,w-f,f],[w,h,w-f,h-f],[0,h,f,h-f]].forEach(([a,b,d,e])=>{
+      c.beginPath();c.moveTo(this.mx(a),this.my(b));c.lineTo(this.mx(d),this.my(e));c.stroke();
+    });
+  }
+  _drawGlass(s){
+    const{x,y,w,h}=s.bounds;
+    const px=this.mx(x),py=this.my(y),pw=this.ms(w),ph=this.ms(h);
+    const c=this.ctx, fl=s.filling;
+    if(fl==='empty'){
+      // Empty — no filling, just outline
+      c.fillStyle='#f8f8f8'; c.fillRect(px,py,pw,ph);
+      c.strokeStyle='#ccc'; c.lineWidth=1; c.strokeRect(px,py,pw,ph);
+    }else if(fl==='sandwich-24'||fl==='sandwich-32'){
+      // Sandwich panel — inner lamination color, "S" + dimensions
+      c.fillStyle=this.lamInner; c.fillRect(px,py,pw,ph);
+      c.strokeStyle=dk(this.lamInner,.2); c.lineWidth=1; c.strokeRect(px,py,pw,ph);
+      const fs=Math.max(12,Math.min(20,pw/6));
+      // Text color: dark on light bg, white on dark bg
+      const lum=parseInt(this.lamInner.slice(1,3),16)*0.299+parseInt(this.lamInner.slice(3,5),16)*0.587+parseInt(this.lamInner.slice(5,7),16)*0.114;
+      c.fillStyle=lum>140?'#333':'#fff'; c.textAlign='center'; c.textBaseline='middle';
+      c.font='bold '+fs+'px sans-serif';
+      c.fillText('S',px+pw/2,py+ph/2-fs*0.7);
+      c.font=(fs*0.7)+'px sans-serif';
+      c.fillText(Math.round(w)+'×'+Math.round(h),px+pw/2,py+ph/2+fs*0.5);
+    }else{
+      // Glass pane (default)
+      c.fillStyle=glassCol(this.glazingFormula);
+      c.fillRect(px,py,pw,ph);
+      c.strokeStyle=glassBrd(this.glazingFormula); c.lineWidth=.5;
+      c.strokeRect(px,py,pw,ph);
+    }
+    this.paneRegions.push({x:px,y:py,w:pw,h:ph,section:s});
+  }
+  _drawMullions(n){
+    if(n.type!=='split')return;
+    const b=n.mullionBounds,c=this.ctx;
+    const px=this.mx(b.x),py=this.my(b.y),pw=this.ms(b.w),ph=this.ms(b.h);
+    c.fillStyle=this._fc(); c.fillRect(px,py,pw,ph);
+    c.strokeStyle=this._fb(); c.lineWidth=1; c.strokeRect(px,py,pw,ph);
+    this.mullionRegions.push({x:px,y:py,w:pw,h:ph,splitNode:n});
+    n.children.forEach(ch=>this._drawMullions(ch));
+  }
+
+  _drawSash(s){
+    const{x,y,w,h}=s.bounds, sash=s.sash, c=this.ctx, o=SASH_OVR;
+    // Sash outer with overlap onto frame
+    const sx=x-o,sy=y-o,sw=w+2*o,sh=h+2*o;
+    this._drawFP([[sx,sy],[sx+sw,sy],[sx+sw-SFW,sy+SFW],[sx+SFW,sy+SFW]]);
+    this._drawFP([[sx+sw,sy],[sx+sw,sy+sh],[sx+sw-SFW,sy+sh-SFW],[sx+sw-SFW,sy+SFW]]);
+    this._drawFP([[sx+sw,sy+sh],[sx,sy+sh],[sx+SFW,sy+sh-SFW],[sx+sw-SFW,sy+sh-SFW]]);
+    this._drawFP([[sx,sy+sh],[sx,sy],[sx+SFW,sy+SFW],[sx+SFW,sy+sh-SFW]]);
+    c.strokeStyle=this._fm(); c.lineWidth=1;
+    [[sx,sy,sx+SFW,sy+SFW],[sx+sw,sy,sx+sw-SFW,sy+SFW],
+     [sx+sw,sy+sh,sx+sw-SFW,sy+sh-SFW],[sx,sy+sh,sx+SFW,sy+sh-SFW]].forEach(([a,b,d,e])=>{
+      c.beginPath();c.moveTo(this.mx(a),this.my(b));c.lineTo(this.mx(d),this.my(e));c.stroke();
+    });
+
+    // Inner glass corners (within sash frame)
+    const ix=sx+SFW,iy=sy+SFW,iw=sw-2*SFW,ih=sh-2*SFW;
+    const tl=[ix,iy],tr=[ix+iw,iy],bl=[ix,iy+ih],br=[ix+iw,iy+ih];
+    // Left opening = handle RIGHT, Right opening = handle LEFT
+    let hp;
+    // Handle on sash frame profile axis (middle of sash profile strip)
+    if(sash.direction==='left') hp=[sx+sw-SFW/2,sy+sh/2]; else hp=[sx+SFW/2,sy+sh/2];
+    const tc=[ix+iw/2,iy];
+    c.strokeStyle='#1a3a6a'; c.lineWidth=1.5;
+    if(sash.type==='swing'||sash.type==='tilt-turn'){
+      if(sash.direction==='left'){this._ln(tl,hp);this._ln(bl,hp);}
+      else{this._ln(tr,hp);this._ln(br,hp);}
+    }
+    if(sash.type==='tilt-turn'||sash.type==='tilt'){this._ln(bl,tc);this._ln(br,tc);}
+    // Handle
+    this._drawHandle(hp[0],hp[1],sash.direction,sash.handleColor||'white');
+    // Hardware label
+    c.fillStyle='#1a3a6a'; c.font='bold 11px Arial'; c.textAlign='center'; c.textBaseline='bottom';
+    c.fillText(sash.hardware,this.mx(x+w/2),this.my(y+h/2)-5);
+  }
+
+  _drawHandle(mmX,mmY,sashDir,hcId){
+    const c=this.ctx, hx=this.mx(mmX), hy=this.my(mmY), s=v=>this.ms(v);
+    const hc=HANDLE_COLORS.find(h=>h.id===hcId)||HANDLE_COLORS[0];
+    c.fillStyle=hc.fill; c.strokeStyle=hc.stroke; c.lineWidth=1;
+    // Simple vertical bar on sash frame axis — sizes in mm
+    const pw=s(12), ph=s(80);
+    c.fillRect(hx-pw/2,hy-ph/2,pw,ph); c.strokeRect(hx-pw/2,hy-ph/2,pw,ph);
+  }
+
+  _ln(a,b){const c=this.ctx;c.beginPath();c.moveTo(this.mx(a[0]),this.my(a[1]));c.lineTo(this.mx(b[0]),this.my(b[1]));c.stroke();}
+
+  _drawHatch(bounds){
+    const{x,y,w,h}=bounds;
+    const px=this.mx(x),py=this.my(y),pw=this.ms(w),ph=this.ms(h),c=this.ctx;
+    c.save(); c.beginPath(); c.rect(px,py,pw,ph); c.clip();
+    c.strokeStyle='#777'; c.lineWidth=.8;
+    for(let i=-ph;i<pw+ph;i+=12){c.beginPath();c.moveTo(px+i,py+ph);c.lineTo(px+i+ph,py);c.stroke();}
+    c.restore();
+  }
+
+  _drawMosqGrid(s){
+    const{x,y,w,h}=s.bounds, o=SASH_OVR;
+    const gx=x-o+SFW,gy=y-o+SFW,gw=w+2*o-2*SFW,gh=h+2*o-2*SFW;
+    const px=this.mx(gx),py=this.my(gy),pw=this.ms(gw),ph=this.ms(gh),c=this.ctx;
+    c.save(); c.beginPath(); c.rect(px,py,pw,ph); c.clip();
+    c.strokeStyle='rgba(80,80,80,.12)'; c.lineWidth=.5;
+    const sp=6;
+    for(let i=0;i<pw;i+=sp){c.beginPath();c.moveTo(px+i,py);c.lineTo(px+i,py+ph);c.stroke();}
+    for(let i=0;i<ph;i+=sp){c.beginPath();c.moveTo(px,py+i);c.lineTo(px+pw,py+i);c.stroke();}
+    c.restore();
+  }
+
+  _drawLabel(s){
+    // Sandwich/empty have their own labels drawn in _drawGlass
+    if(s.filling==='sandwich-24'||s.filling==='sandwich-32'||s.filling==='empty')return;
+    const{x,y,w,h}=s.bounds,cx=this.mx(x+w/2),cy=this.my(y+h/2),c=this.ctx;
+    let gw=Math.round(w),gh=Math.round(h);
+    if(s.sash){gw=Math.round(w-2*SFW+2*SASH_OVR);gh=Math.round(h-2*SFW+2*SASH_OVR);}
+    const oY=s.sash?10:0;
+    c.fillStyle='#333'; c.font='13px Arial'; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(`${gw} x ${gh}`,cx,cy-8+oY);
+    c.fillText(this.glazingFormula,cx,cy+8+oY);
+  }
+
+  _drawMosBadge(s){
+    const{x,y,w}=s.bounds,lbl={simple:'М/С',anticat:'М/С АК',antipollen:'М/С АП'}[s.mosquito]||'';
+    if(!lbl)return; const c=this.ctx;
+    const tw=c.measureText?c.measureText(lbl).width+10:40;
+    const px=this.mx(x+w/2)-tw/2, py=this.my(y)+8;
+    c.fillStyle='rgba(255,255,255,.9)'; c.fillRect(px,py,tw,16);
+    c.strokeStyle='#e8521a'; c.lineWidth=1; c.strokeRect(px,py,tw,16);
+    c.fillStyle='#e8521a'; c.font='bold 9px Arial'; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(lbl,px+tw/2,py+8);
+    // Small orange square
+    c.fillStyle='#e8521a'; c.fillRect(px+tw+3,py+2,10,10);
+  }
+
+  _drawSill(){
+    const c=this.ctx,cx=this.mx(this.width/2),cy=this.my(this.height-FW/2);
+    c.fillStyle='#fff'; c.strokeStyle='#999'; c.lineWidth=1;
+    c.fillRect(cx-14,cy-7,28,14); c.strokeRect(cx-14,cy-7,28,14);
+    c.fillStyle='#333'; c.font='9px Arial'; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('П/П',cx,cy);
+    c.fillStyle='#e8521a'; c.fillRect(cx+17,cy-4,8,8);
+  }
+
+  // ========== DIMENSIONS ==========
+  _drawDims(){
+    const fL=this.mx(0),fR=this.mx(this.width),fT=this.my(0),fB=this.my(this.height);
+    const vS=[],hS=[]; this._gs(this.root,'v',vS); this._gs(this.root,'h',hS);
+    vS.sort((a,b)=>a.position-b.position); hS.sort((a,b)=>a.position-b.position);
+    // Horizontal
+    if(vS.length){
+      const subY=fB+25,totY=fB+60;
+      const pts=[fL,...vS.map(s=>this.mx(s.position)),fR];
+      pts.forEach(x=>this._extV(x,fB+3,totY+5));
+      for(let i=0;i<pts.length-1;i++){
+        const val=i===0?Math.round(vS[0].position):i>=vS.length?Math.round(this.width-vS[vS.length-1].position):Math.round(vS[i].position-vS[i-1].position);
+        this._hD(pts[i],pts[i+1],subY,val);
+        this._addDR((pts[i]+pts[i+1])/2,subY,'vsub-'+i,val);
+      }
+      this._hD(fL,fR,totY,this.width);
+      this._addDR((fL+fR)/2,totY,'width',this.width);
+    }else{
+      const tY=fB+30; [fL,fR].forEach(x=>this._extV(x,fB+3,tY+5));
+      this._hD(fL,fR,tY,this.width); this._addDR((fL+fR)/2,tY,'width',this.width);
+    }
+    // Vertical
+    if(hS.length){
+      const subX=fR+25,totX=fR+60;
+      const pts=[fT,...hS.map(s=>this.my(s.position)),fB];
+      pts.forEach(y=>this._extH(y,fR+3,totX+5));
+      for(let i=0;i<pts.length-1;i++){
+        const val=i===0?Math.round(hS[0].position):i>=hS.length?Math.round(this.height-hS[hS.length-1].position):Math.round(hS[i].position-hS[i-1].position);
+        this._vD(pts[i],pts[i+1],subX,val);
+        this._addDR(subX,(pts[i]+pts[i+1])/2,'hsub-'+i,val);
+      }
+      this._vD(fT,fB,totX,this.height); this._addDR(totX,(fT+fB)/2,'height',this.height);
+    }else{
+      const tX=fR+30; [fT,fB].forEach(y=>this._extH(y,fR+3,tX+5));
+      this._vD(fT,fB,tX,this.height); this._addDR(tX,(fT+fB)/2,'height',this.height);
+    }
+  }
+  _gs(n,d,r){if(n.type!=='split')return;if(n.direction===d)r.push(n);n.children.forEach(c=>this._gs(c,d,r));}
+  _addDR(cx,cy,t,v){this.dimRegions.push({x:cx-30,y:cy-12,w:60,h:24,cx,cy,type:t,value:v});}
+  _hD(x1,x2,y,v){
+    const c=this.ctx; c.strokeStyle='#333'; c.fillStyle='#333'; c.lineWidth=1;
+    c.beginPath();c.moveTo(x1,y);c.lineTo(x2,y);c.stroke();
+    this._ar(x1,y,'l');this._ar(x2,y,'r');
+    const t=''+v; c.font='bold 13px Arial'; c.textAlign='center'; c.textBaseline='middle';
+    const tw=c.measureText(t).width+8,tx=(x1+x2)/2;
+    c.fillStyle='#fff';c.fillRect(tx-tw/2,y-9,tw,18); c.fillStyle='#333';c.fillText(t,tx,y);
+  }
+  _vD(y1,y2,x,v){
+    const c=this.ctx; c.strokeStyle='#333'; c.fillStyle='#333'; c.lineWidth=1;
+    c.beginPath();c.moveTo(x,y1);c.lineTo(x,y2);c.stroke();
+    this._ar(x,y1,'u');this._ar(x,y2,'d');
+    const t=''+v; c.font='bold 13px Arial'; const tw=c.measureText(t).width+8,ty=(y1+y2)/2;
+    c.save();c.translate(x,ty);c.rotate(-Math.PI/2);
+    c.fillStyle='#fff';c.fillRect(-tw/2,-9,tw,18);c.fillStyle='#333';c.textAlign='center';c.textBaseline='middle';
+    c.fillText(t,0,0);c.restore();
+  }
+  _ar(x,y,d){const c=this.ctx,l=8,h=3;c.fillStyle='#333';c.beginPath();
+    if(d==='l'){c.moveTo(x,y);c.lineTo(x+l,y-h);c.lineTo(x+l,y+h);}
+    else if(d==='r'){c.moveTo(x,y);c.lineTo(x-l,y-h);c.lineTo(x-l,y+h);}
+    else if(d==='u'){c.moveTo(x,y);c.lineTo(x-h,y+l);c.lineTo(x+h,y+l);}
+    else{c.moveTo(x,y);c.lineTo(x-h,y-l);c.lineTo(x+h,y-l);}
+    c.closePath();c.fill();}
+  _extV(x,y1,y2){const c=this.ctx;c.strokeStyle='#333';c.lineWidth=.5;c.beginPath();c.moveTo(x,y1);c.lineTo(x,y2);c.stroke();}
+  _extH(y,x1,x2){const c=this.ctx;c.strokeStyle='#333';c.lineWidth=.5;c.beginPath();c.moveTo(x1,y);c.lineTo(x2,y);c.stroke();}
+
+  // ========== HIT TESTING ==========
+  _hitDim(mx,my){for(const d of this.dimRegions)if(mx>=d.x&&mx<=d.x+d.w&&my>=d.y&&my<=d.y+d.h)return d;return null;}
+  _hitPane(mx,my){
+    let best=null,bestA=Infinity;
+    for(const r of this.paneRegions){if(mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h){const a=r.w*r.h;if(a<bestA){best=r.section;bestA=a;}}}
+    return best;
+  }
+  _hitMullion(mx,my){
+    for(const r of this.mullionRegions)if(mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h)return r.splitNode;
+    return null;
+  }
+
+  // ========== EVENTS ==========
+  _setupEvents(){
+    this.canvas.addEventListener('mousedown',e=>this._onClick(e));
+    this.canvas.addEventListener('contextmenu',e=>this._onCtx(e));
+    this.canvas.addEventListener('mousemove',e=>{
+      const p=this._mp(e);
+      this.canvas.style.cursor=(this._hitDim(p.x,p.y)||this._hitPane(p.x,p.y)||this._hitMullion(p.x,p.y))?'pointer':'default';
+    });
+    this.dimInput.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){this._applyDim(parseInt(this.dimInput.value));this._hideDim();}
+      else if(e.key==='Escape')this._hideDim();
+    });
+    this.dimInput.addEventListener('blur',()=>{if(this.editingDim){this._applyDim(parseInt(this.dimInput.value));this._hideDim();}});
+  }
+  _mp(e){const r=this.canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*this.canvas.width/r.width,y:(e.clientY-r.top)*this.canvas.height/r.height};}
+
+  _onClick(e){
+    if(e.button!==0)return;
+    activeDesigner=this;
+    const p=this._mp(e);
+    // Dim
+    const dim=this._hitDim(p.x,p.y);
+    if(dim){this._showDim(dim);return;}
+    // Mullion
+    const mul=this._hitMullion(p.x,p.y);
+    if(mul){
+      this.selectedPanes=[];
+      this.selectedMullion=(this.selectedMullion===mul)?null:mul;
+      this.render(); return;
+    }
+    // Pane
+    const pane=this._hitPane(p.x,p.y);
+    if(pane){
+      this.selectedMullion=null;
+      if(e.shiftKey){
+        const idx=this.selectedPanes.indexOf(pane);
+        if(idx>=0)this.selectedPanes.splice(idx,1);else this.selectedPanes.push(pane);
+      }else{
+        this.selectedPanes=(this.selectedPanes.length===1&&this.selectedPanes[0]===pane)?[]:[pane];
+      }
+      this.render(); return;
+    }
+    // Outside — deselect all
+    this.selectedPanes=[]; this.selectedMullion=null; this.render();
+  }
+
+  _onCtx(e){
+    e.preventDefault();
+    const items=[];
+    // Single pane
+    if(this.selectedPanes.length===1){
+      const pane=this.selectedPanes[0];
+      items.push({icon:'┃',label:'Вертикальный импост',action:()=>this.addMullion(pane,'v')});
+      items.push({icon:'━',label:'Горизонтальный импост',action:()=>this.addMullion(pane,'h')});
+      items.push({divider:true});
+      items.push({icon:'◫',label:'Створка...',action:()=>openSashDialog(this)});
+      if(pane.sash){
+        items.push({icon:'x',label:'Убрать створку',action:()=>this.removeSash(pane)});
+      }
+      items.push({divider:true});
+      items.push({header:'Заполнение'});
+      const fl=pane.filling;
+      items.push({icon:fl===null?'●':'',label:'Стеклопакет',action:()=>{pane.filling=null;this.render();this._notify();}});
+      items.push({icon:fl==='sandwich-24'?'●':'',label:'Сэндвич 24мм',action:()=>{pane.filling='sandwich-24';this.render();this._notify();}});
+      items.push({icon:fl==='sandwich-32'?'●':'',label:'Сэндвич 32мм',action:()=>{pane.filling='sandwich-32';this.render();this._notify();}});
+      if(pane.sash){
+        items.push({divider:true});
+        items.push({header:'Москитная сетка'});
+        const mq=pane.mosquito;
+        items.push({icon:mq===null?'*':'',label:'Нет',action:()=>{pane.mosquito=null;this.render();this._notify();}});
+        items.push({icon:mq==='simple'?'*':'',label:'Простая',action:()=>{pane.mosquito='simple';this.render();this._notify();}});
+        items.push({icon:mq==='anticat'?'*':'',label:'Антикошка',action:()=>{pane.mosquito='anticat';this.render();this._notify();}});
+        items.push({icon:mq==='antipollen'?'*':'',label:'Антипыльца',action:()=>{pane.mosquito='antipollen';this.render();this._notify();}});
+      }
+    }
+    // Multiple panes
+    else if(this.selectedPanes.length>1){
+      items.push({header:'Выравнивание'});
+      items.push({icon:'↔',label:'По свету (горизонт.)',action:()=>this.align('light','v')});
+      items.push({icon:'↕',label:'По свету (вертик.)',action:()=>this.align('light','h')});
+      items.push({divider:true});
+      items.push({icon:'⇔',label:'По геометрии (горизонт.)',action:()=>this.align('geometry','v')});
+      items.push({icon:'⇕',label:'По геометрии (вертик.)',action:()=>this.align('geometry','h')});
+    }
+    // Mullion selected
+    else if(this.selectedMullion){
+      items.push({icon:'x',label:'Удалить импост (Delete)',action:()=>this.removeMullion(this.selectedMullion)});
+    }
+    if(!items.length)return;
+    showCtxMenu(e.clientX,e.clientY,items);
+  }
+
+  _notify(){this.updateConfigInfo();if(this.onConfigChange)this.onConfigChange();}
+
+  // Dim editing
+  _showDim(d){this.editingDim=d;const i=this.dimInput;i.style.left=(d.cx-40)+'px';i.style.top=(d.cy-14)+'px';i.value=d.value;i.classList.remove('hidden');setTimeout(()=>{i.focus();i.select();},0);}
+  _hideDim(){this.editingDim=null;this.dimInput.classList.add('hidden');}
+  _applyDim(val){
+    if(!this.editingDim||isNaN(val))return;
+    val=Math.max(200,Math.min(5000,val));
+    const t=this.editingDim.type, minM=FW+MW+50;
+    if(t==='width'){this.width=val;this._clamp(this.root,'v',FW,val-FW);}
+    else if(t==='height'){this.height=val;this._clamp(this.root,'h',FW,val-FW);}
+    else if(t.startsWith('vsub-')){
+      const idx=parseInt(t.split('-')[1]);
+      const sp=[];this._gs(this.root,'v',sp);sp.sort((a,b)=>a.position-b.position);
+      if(idx<sp.length){const prev=idx===0?0:sp[idx-1].position;sp[idx].position=Math.max(minM,Math.min(prev+val,this.width-minM));}
+      else if(idx===sp.length&&sp.length){sp[sp.length-1].position=Math.max(minM,Math.min(this.width-val,this.width-minM));}
+    }
+    else if(t.startsWith('hsub-')){
+      const idx=parseInt(t.split('-')[1]);
+      const sp=[];this._gs(this.root,'h',sp);sp.sort((a,b)=>a.position-b.position);
+      if(idx<sp.length){const prev=idx===0?0:sp[idx-1].position;sp[idx].position=Math.max(minM,Math.min(prev+val,this.height-minM));}
+      else if(idx===sp.length&&sp.length){sp[sp.length-1].position=Math.max(minM,Math.min(this.height-val,this.height-minM));}
+    }
+    this._computeScale();this.computeLayout();this.render();this._notify();
+  }
+  _clamp(n,d,mn,mx){if(n.type!=='split')return;if(n.direction===d)n.position=Math.max(mn+MW,Math.min(n.position,mx-MW));n.children.forEach(c=>this._clamp(c,d,mn,mx));}
+
+  // Tree ops
+  addMullion(pane,dir){
+    const pos=dir==='v'?pane.bounds.x+pane.bounds.w/2:pane.bounds.y+pane.bounds.h/2;
+    const nn={type:'split',direction:dir,position:pos,children:[{type:'leaf',sash:null,mosquito:null,filling:null},{type:'leaf',sash:null,mosquito:null,filling:null}]};
+    this._rep(pane,nn); this.selectedPanes=[];this.selectedMullion=null;
+    this.computeLayout();this._computeScale();this.render();this._notify();
+  }
+  addSash(pane,opts){pane.sash={...opts};this.selectedPanes=[];this.render();this._notify();}
+  removeSash(pane){pane.sash=null;pane.mosquito=null;this.selectedPanes=[];this.render();this._notify();}
+  removeMullion(splitNode){
+    const nl={type:'leaf',sash:null,mosquito:null,filling:null};
+    this._rep(splitNode,nl);this.selectedMullion=null;
+    this.computeLayout();this._computeScale();this.render();this._notify();
+  }
+  _rep(old,nn){if(this.root===old){this.root=nn;return;}this._repIn(this.root,old,nn);}
+  _repIn(p,old,nn){if(p.type!=='split')return false;for(let i=0;i<p.children.length;i++){if(p.children[i]===old){p.children[i]=nn;return true;}if(this._repIn(p.children[i],old,nn))return true;}return false;}
+
+  reset(){
+    this.width=1000;this.height=1000;
+    this.root={type:'leaf',sash:null,mosquito:null,filling:null};
+    this.selectedPanes=[];this.selectedMullion=null;
+    this.glazingFormula='4м1-16-4м1';
+    this.lamInner='#f0f0ec';this.lamOuter='#f0f0ec';
+    this._computeScale();this.computeLayout();this.render();this._notify();
+    if(this.onReset)this.onReset();
+  }
+
+  // Alignment
+  align(type,dir){
+    const sp=[];this._gs(this.root,dir,sp);if(!sp.length)return;
+    sp.sort((a,b)=>a.position-b.position);
+    const total=dir==='v'?this.width:this.height;
+    const nM=sp.length,nP=nM+1;
+    if(type==='geometry'){for(let i=0;i<nM;i++)sp[i].position=total*(i+1)/(nM+1);}
+    else{
+      const panes=[];this._po(this.root,dir,panes);
+      const avail=total-2*FW-nM*MW;
+      const nS=panes.filter(p=>p.sash).length;
+      const vis=Math.max(50,(avail-nS*2*SFW)/nP);
+      let pos=FW;
+      for(let i=0;i<nP;i++){
+        pos+=panes[i]&&panes[i].sash?vis+2*SFW:vis;
+        if(i<nM){sp[i].position=pos+MW/2;pos+=MW;}
+      }
+    }
+    this.selectedPanes=[];this.computeLayout();this.render();this._notify();
+  }
+  _po(n,d,r){if(n.type==='leaf'){r.push(n);return;}this._po(n.children[0],d,r);this._po(n.children[1],d,r);}
+
+  // Config info
+  updateConfigInfo(){
+    const area=(this.width*this.height/1e6).toFixed(2);
+    this.configInfoEl.innerHTML=`
+      <div class="info-row"><span class="label">Размеры</span><span class="value">${this.width} x ${this.height}</span></div>
+      <div class="info-row"><span class="label">Площадь</span><span class="value">${area} м2</span></div>
+      <div class="info-row"><span class="label">Профиль</span><span class="value">${this.profile}</span></div>
+      <div class="info-row"><span class="label">Тип</span><span class="value">${this.getDesc()}</span></div>`;
+  }
+  getDesc(){
+    const sc=this.sections.filter(s=>s.sash).length,tot=this.sections.length;
+    if(tot===1&&sc===0)return'Глухое';
+    if(tot===1&&sc===1)return'1 створка ('+this._sd(this.sections[0].sash)+')';
+    let d=tot+' секц.';
+    const ss=this.sections.filter(s=>s.sash);
+    if(ss.length)d+=', '+ss.map(s=>this._sd(s.sash)).join(', ');
+    return d;
+  }
+  _sd(s){const t={'swing':'пов.','tilt-turn':'п/о','tilt':'фрам.'};const dr={'left':'лев.','right':'прав.'};return(t[s.type]||'')+' '+(dr[s.direction]||'');}
+  getConfigHash(){return this.profile+'|'+this.glazingFormula+'|'+this.sections.length+'p|'+this.sections.map(s=>s.sash?s.sash.type+'-'+s.sash.direction:'fixed').join('|');}
+}
+
+// ========== Delete key for mullion and filling ==========
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Delete'||!activeDesigner)return;
+  if(activeDesigner.selectedMullion){
+    activeDesigner.removeMullion(activeDesigner.selectedMullion);
+  }else if(activeDesigner.selectedPanes.length){
+    activeDesigner.selectedPanes.forEach(p=>{p.filling='empty';});
+    activeDesigner.render(); activeDesigner._notify();
+  }
+});
+
+// ========== CONTEXT MENU ==========
+function showCtxMenu(x,y,items){
+  const m=document.getElementById('ctxMenu');m.innerHTML='';
+  items.forEach(item=>{
+    if(item.divider){const d=document.createElement('div');d.className='ctx-menu-divider';m.appendChild(d);}
+    else if(item.header){const h=document.createElement('div');h.className='ctx-menu-header';h.textContent=item.header;m.appendChild(h);}
+    else{const el=document.createElement('div');el.className='ctx-menu-item';
+      el.innerHTML='<span class="icon">'+(item.icon||'')+'</span><span>'+item.label+'</span>';
+      el.addEventListener('click',()=>{hideCtxMenu();item.action();});m.appendChild(el);}
+  });
+  m.style.left=x+'px';m.style.top=y+'px';m.classList.remove('hidden');
+}
+function hideCtxMenu(){document.getElementById('ctxMenu').classList.add('hidden');}
+document.addEventListener('mousedown',e=>{if(!e.target.closest('.ctx-menu'))hideCtxMenu();});
+
+// ========== SASH DIALOG ==========
+let _sashD=null;
+function openSashDialog(d){
+  _sashD=d;
+  const pane=d.selectedPanes[0];
+  if(pane&&pane.sash){
+    document.querySelector('input[name="sashDir"][value="'+pane.sash.direction+'"]').checked=true;
+    document.querySelector('input[name="sashType"][value="'+pane.sash.type+'"]').checked=true;
+    document.getElementById('sashHardware').value=pane.sash.hardware;
+    document.getElementById('sashHandleColor').value=pane.sash.handleColor||'white';
+  }
+  document.getElementById('overlay').classList.remove('hidden');
+  document.getElementById('sashDialog').classList.remove('hidden');
+}
+function closeSashDialog(){document.getElementById('overlay').classList.add('hidden');document.getElementById('sashDialog').classList.add('hidden');_sashD=null;}
+function applySash(){
+  if(!_sashD||!_sashD.selectedPanes.length)return;
+  _sashD.addSash(_sashD.selectedPanes[0],{
+    direction:document.querySelector('input[name="sashDir"]:checked').value,
+    type:document.querySelector('input[name="sashType"]:checked').value,
+    hardware:document.getElementById('sashHardware').value,
+    handleColor:document.getElementById('sashHandleColor').value
+  });
+  closeSashDialog();
+}
+
+// ========== TABS ==========
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+    if(tab.dataset.tab==='calculator')drawPreview();
+  });
+});
+
+// ========== COMPONENT PRICING ==========
+const PROFILES=['Brusbox 60'];
+const GLAZINGS=['4м1-16-4м1','4м1-10-4м1-10-4м1','4м1-16-4м1(i)'];
+const GLAZ_SHORT=['Однокам.','Двухкам.','Энергосбер.'];
+
+function buildBasePriceTable(){
+  const el=document.getElementById('basePriceTable');
+  let html='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html+='<tr><th style="text-align:left;padding:2px 4px"></th>';
+  GLAZ_SHORT.forEach(g=>html+='<th style="padding:2px 3px;font-size:10px">'+g+'</th>');
+  html+='</tr>';
+  PROFILES.forEach(prof=>{
+    html+='<tr><td style="padding:2px 4px;font-weight:600;font-size:10px">'+prof+'</td>';
+    GLAZINGS.forEach(glaz=>{
+      const key='base_'+prof+'_'+glaz;
+      html+='<td style="padding:2px"><input type="number" class="cp" data-key="'+key+'" step="100" placeholder="0" style="width:100%;padding:3px;font-size:11px;border:1px solid #ddd;border-radius:3px;text-align:center"></td>';
+    });
+    html+='</tr>';
+  });
+  html+='</table>';
+  el.innerHTML=html;
+}
+
+function saveComponentPrices(){
+  const data={};
+  document.querySelectorAll('.cp:not([disabled])').forEach(inp=>{
+    const v=parseFloat(inp.value);
+    if(!isNaN(v)&&v!==0)data[inp.dataset.key]=v;
+  });
+  localStorage.setItem('okna_components',JSON.stringify(data));
+}
+function loadComponentPrices(){
+  const data=JSON.parse(localStorage.getItem('okna_components')||'{}');
+  document.querySelectorAll('.cp:not([disabled])').forEach(inp=>{
+    if(data[inp.dataset.key]!==undefined)inp.value=data[inp.dataset.key];
+  });
+}
+
+function estimatePrice(d){
+  const data=JSON.parse(localStorage.getItem('okna_components')||'{}');
+  const area=d.width*d.height/1e6;
+  // Base price per m²
+  const baseKey='base_'+d.profile+'_'+d.glazingFormula;
+  const basePm2=data[baseKey]||0;
+  if(!basePm2)return null;
+  let price=Math.round(basePm2*area);
+  // Sashes
+  const secs=d.sections||[];
+  secs.forEach(s=>{
+    if(!s.sash)return;
+    const st=s.sash.type;
+    if(st==='swing')price+=(data.sash_swing||0);
+    else if(st==='tilt-turn')price+=(data.sash_tiltturn||0);
+    else if(st==='tilt')price+=(data.sash_tilt||0);
+    // Hardware surcharge
+    const hw=s.sash.hardware;
+    if(hw&&hw!=='Vorne')price+=(data['hw_'+hw]||0);
+    // Colored handle
+    if(s.sash.handleColor&&s.sash.handleColor!=='white')price+=(data.handle_color||0);
+  });
+  // Lamination
+  if(d.lamInner!=='#f0f0ec')price+=(data.lam_inner||0);
+  if(d.lamOuter!=='#f0f0ec')price+=(data.lam_outer||0);
+  // Mullions
+  let mullions=0;(function countM(n){if(n.type==='split'){mullions++;n.children.forEach(countM);}})(d.root);
+  price+=mullions*(data.mullion||0);
+  // Mosquito nets
+  price+=secs.filter(s=>s.mosquito).length*(data.mosquito||0);
+  // Sandwich delta
+  price+=secs.filter(s=>s.filling==='sandwich-24'||s.filling==='sandwich-32').length*(data.sandwich_delta||0);
+  return price;
+}
+// ========== CLIENT CALCULATOR ==========
+const WIN_TYPES=[
+  {id:'single',name:'Одинарное',parts:1,minSash:0,maxSash:1,defW:600,defH:1400},
+  {id:'double',name:'Из двух частей',parts:2,minSash:0,maxSash:2,defW:1400,defH:1400},
+  {id:'triple',name:'Из трёх частей',parts:3,minSash:0,maxSash:3,defW:2000,defH:1400},
+  {id:'balcony',name:'Балконный блок',parts:2,minSash:1,maxSash:3,defW:1400,defH:1400,hasDoor:true},
+];
+let selectedType='double', selectedSashes=1;
+
+// Sash layout per type: returns array of sash configs per pane index
+// Each entry: null (fixed) or {type, direction}
+function getSashLayout(type, count, parts){
+  const r=new Array(parts).fill(null);
+  if(type==='single'){
+    if(count>=1) r[0]={type:'tilt-turn',dir:'left'};
+  }else if(type==='double'){
+    if(count>=1) r[0]={type:'tilt-turn',dir:'left'};
+    if(count>=2) r[1]={type:'tilt-turn',dir:'right'};
+  }else if(type==='triple'){
+    if(count===1) r[1]={type:'tilt-turn',dir:'right'};
+    if(count>=2){r[0]={type:'tilt-turn',dir:'right'};r[2]={type:'tilt-turn',dir:'right'};}
+    if(count>=3) r[1]={type:'tilt-turn',dir:'right'};
+  }
+  // balcony: handled separately (door + window panes)
+  return r;
+}
+function getBalconySashLayout(count, winParts){
+  const door={type:'swing',dir:'left'}; // always
+  const win=new Array(winParts).fill(null);
+  if(count>=2) win[0]={type:'tilt-turn',dir:'left'};
+  if(count>=3) win[1]={type:'tilt-turn',dir:'right'};
+  return {door, win};
+}
+
+function typeIcon(t){
+  const p=t.parts, w=60, h=50, door=t.hasDoor, f=4, m=3;
+  let svg=`<svg width="${w+(door?24:0)}" height="${h}" viewBox="0 0 ${w+(door?24:0)} ${h}" style="display:block;margin:0 auto">`;
+  if(door){
+    // Door
+    svg+=`<rect x="0" y="0" width="20" height="${h}" fill="#f0f0ec" stroke="#bbb" stroke-width="1"/>`;
+    svg+=`<rect x="${f}" y="${f}" width="${20-2*f}" height="${h-2*f}" fill="#80e8e8" stroke="#4cb8b8" stroke-width="0.5"/>`;
+    // Window (top-aligned)
+    const wh=h-10;
+    svg+=`<rect x="22" y="0" width="${w-2}" height="${wh}" fill="#f0f0ec" stroke="#bbb" stroke-width="1"/>`;
+    const iw=w-2-2*f, ih=wh-2*f, pw=(iw-(p-1)*m)/p;
+    for(let i=0;i<p;i++){
+      svg+=`<rect x="${22+f+i*(pw+m)}" y="${f}" width="${pw}" height="${ih}" fill="#80e8e8" stroke="#4cb8b8" stroke-width="0.5"/>`;
+    }
+  }else{
+    svg+=`<rect x="0" y="0" width="${w}" height="${h}" fill="#f0f0ec" stroke="#bbb" stroke-width="1"/>`;
+    const iw=w-2*f, ih=h-2*f, pw=(iw-(p-1)*m)/p;
+    for(let i=0;i<p;i++){
+      svg+=`<rect x="${f+i*(pw+m)}" y="${f}" width="${pw}" height="${ih}" fill="#80e8e8" stroke="#4cb8b8" stroke-width="0.5"/>`;
+    }
+  }
+  svg+='</svg>';
+  return svg;
+}
+
+function buildTypeCards(){
+  const el=document.getElementById('typeCards');
+  el.innerHTML=WIN_TYPES.map(t=>`<div data-type="${t.id}" onclick="selectType('${t.id}')" style="border:2px solid ${t.id===selectedType?'#E8521A':'#ddd'};border-radius:8px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s">
+    ${typeIcon(t)}
+    <div style="font-size:12px;font-weight:600;margin-top:4px">${t.name}</div>
+  </div>`).join('');
+  // Show/hide sash selector
+  const t=WIN_TYPES.find(t=>t.id===selectedType);
+  const sashEl=document.getElementById('sashSelector');
+  if(t.maxSash>0){
+    sashEl.style.display='';
+    const sel=document.getElementById('cSashes');
+    sel.innerHTML='';
+    for(let i=t.minSash;i<=t.maxSash;i++){
+      const o=document.createElement('option');o.value=i;o.textContent=i+' шт.';sel.appendChild(o);
+    }
+    sel.value=Math.min(selectedSashes,t.maxSash);
+    if(selectedSashes<t.minSash)selectedSashes=t.minSash;
+    sel.value=selectedSashes;
+  }else{
+    sashEl.style.display='none';
+    selectedSashes=0;
+  }
+  updateMosquitoSelector();
+  updateBlindsSelector();
+}
+function updateBlindsSelector(){
+  const t=WIN_TYPES.find(x=>x.id===selectedType);
+  // Для балкона: parts оконных + 1 дверь
+  const maxParts=t?(selectedType==='balcony'?t.parts+1:t.parts):1;
+  const bSec=document.getElementById('blindsSection');
+  const bSel=document.getElementById('cBlinds');
+  const bColor=document.getElementById('blindsColorRow');
+  const rSec=document.getElementById('rollSection');
+  const rSel=document.getElementById('cRolls');
+  const rColor=document.getElementById('rollsColorRow');
+  bSec.style.display='';
+  rSec.style.display='';
+  // Жалюзи + шторы делят части: сумма ≤ maxParts
+  const bCur=parseInt(bSel.value)||0;
+  const rCur=parseInt(rSel.value)||0;
+  const maxBlinds=maxParts-rCur;
+  const maxRolls=maxParts-bCur;
+  bSel.innerHTML='<option value="0">Нет</option>';
+  for(let i=1;i<=maxBlinds;i++) bSel.innerHTML+=`<option value="${i}">${i} шт.</option>`;
+  bSel.value=Math.min(bCur,maxBlinds);
+  bColor.style.display=parseInt(bSel.value)>0?'':'none';
+  rSel.innerHTML='<option value="0">Нет</option>';
+  for(let i=1;i<=maxRolls;i++) rSel.innerHTML+=`<option value="${i}">${i} шт.</option>`;
+  rSel.value=Math.min(rCur,maxRolls);
+  rColor.style.display=parseInt(rSel.value)>0?'':'none';
+}
+function updateMosquitoSelector(){
+  const t=WIN_TYPES.find(x=>x.id===selectedType);
+  // Max nets = sashes on window parts (balcony: only window sashes, not door)
+  let maxNets=0;
+  if(selectedType==='balcony'){
+    const bsl=getBalconySashLayout(selectedSashes, t.parts);
+    maxNets=bsl.win.filter(s=>s).length;
+  }else{
+    maxNets=selectedSashes;
+  }
+  const sec=document.getElementById('mosquitoSection');
+  const sel=document.getElementById('cMosquito');
+  if(maxNets>0){
+    sec.style.display='';
+    const cur=parseInt(sel.value)||0;
+    sel.innerHTML='<option value="0">Нет</option>';
+    for(let i=1;i<=maxNets;i++){
+      sel.innerHTML+=`<option value="${i}">${i} шт.</option>`;
+    }
+    sel.value=Math.min(cur,maxNets);
+  }else{
+    sec.style.display='none';
+    sel.value=0;
+  }
+}
+function selectType(id){
+  const t=WIN_TYPES.find(t=>t.id===id);
+  selectedType=id;
+  selectedSashes=t.minSash!==undefined?t.minSash:0;
+  // Toggle dims
+  document.getElementById('dimsNormal').style.display=id==='balcony'?'none':'';
+  document.getElementById('dimsBalcony').style.display=id==='balcony'?'':'none';
+  if(id!=='balcony'){
+    document.getElementById('cWidth').value=t.defW;
+    document.getElementById('cHeight').value=t.defH;
+  }
+  buildTypeCards();
+  drawPreview();
+}
+
+// SVG helpers for window-like drawing
+function getLamColor(){
+  const outer=document.getElementById('cLamOuter').value||'#f0f0ec';
+  const inner=document.getElementById('cLamInner').value||'#f0f0ec';
+  return {outer,inner};
+}
+function darken(hex,amt){
+  let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  r=Math.max(0,r-amt);g=Math.max(0,g-amt);b=Math.max(0,b-amt);
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function svgFrame(x,y,w,h,fw,skip){
+  // Frame with mitered corners (4 trapezoids) — outer side uses lamination color
+  // skip: 'left'|'right' — пропустить сторону (для балконного блока)
+  const lam=getLamColor();
+  const fc=lam.inner, sc=darken(fc,40), mc=darken(fc,20);
+  let s='';
+  const tl=skip==='left'?x:x+fw, tr=skip==='right'?x+w:x+w-fw;
+  const bl=skip==='left'?x:x+fw, br=skip==='right'?x+w:x+w-fw;
+  // Top
+  s+=`<polygon points="${x},${y} ${x+w},${y} ${tr},${y+fw} ${tl},${y+fw}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  // Bottom
+  s+=`<polygon points="${x+w},${y+h} ${x},${y+h} ${bl},${y+h-fw} ${br},${y+h-fw}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  // Right
+  if(skip!=='right'){
+    s+=`<polygon points="${x+w},${y} ${x+w},${y+h} ${x+w-fw},${y+h-fw} ${x+w-fw},${y+fw}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+    s+=`<line x1="${x+w}" y1="${y}" x2="${x+w-fw}" y2="${y+fw}" stroke="${mc}" stroke-width="0.8"/>`;
+    s+=`<line x1="${x+w}" y1="${y+h}" x2="${x+w-fw}" y2="${y+h-fw}" stroke="${mc}" stroke-width="0.8"/>`;
+  }
+  // Left
+  if(skip!=='left'){
+    s+=`<polygon points="${x},${y+h} ${x},${y} ${x+fw},${y+fw} ${x+fw},${y+h-fw}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+    s+=`<line x1="${x}" y1="${y}" x2="${x+fw}" y2="${y+fw}" stroke="${mc}" stroke-width="0.8"/>`;
+    s+=`<line x1="${x}" y1="${y+h}" x2="${x+fw}" y2="${y+h-fw}" stroke="${mc}" stroke-width="0.8"/>`;
+  }
+  return s;
+}
+function getGlassTint(){
+  const g=document.getElementById('cGlazing').value;
+  if(g==='double')return {color:'#5cc8c8',opacity:0.18};
+  if(g==='energy')return {color:'#8888d8',opacity:0.22};
+  return {color:'#60d8d8',opacity:0.12}; // single — почти прозрачный
+}
+var _sceneDefs=false;
+var SUMMER_IMG='data:image/jpeg;base64,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';
+function svgSceneDefs(){
+  if(_sceneDefs)return '';
+  _sceneDefs=true;
+  return '<defs><linearGradient id="glassGlare" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.22"/><stop offset="25%" stop-color="#fff" stop-opacity="0.03"/><stop offset="60%" stop-color="#fff" stop-opacity="0"/><stop offset="92%" stop-color="#fff" stop-opacity="0.06"/></linearGradient></defs>';
+}
+function svgScene(x,y,w,h){
+  var cid='gc'+Math.round(x)+'_'+Math.round(y);
+  return '<clipPath id="'+cid+'"><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/></clipPath><image href="'+SUMMER_IMG+'" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+cid+')"/>';
+}
+function svgGlass(x,y,w,h){
+  const t=getGlassTint();
+  let s='';
+  s+=svgSceneDefs();
+  // Пейзаж за стеклом
+  s+=svgScene(x,y,w,h);
+  // Тонировка стеклопакета
+  s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${t.color}" opacity="${t.opacity}"/>`;
+  // Отблеск
+  s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#glassGlare)"/>`;
+  // Рамка стекла
+  s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#a0b8c0" stroke-width="0.3"/>`;
+  return s;
+}
+function svgMullion(x,y,w,h){
+  const lam=getLamColor();
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${lam.inner}" stroke="${darken(lam.inner,40)}" stroke-width="0.5"/>`;
+}
+function svgMosquito(x,y,w,h){
+  const sp=4; // grid spacing
+  let s=`<g stroke="#888" stroke-width="0.3" opacity="0.25">`;
+  for(let i=sp;i<w;i+=sp) s+=`<line x1="${x+i}" y1="${y}" x2="${x+i}" y2="${y+h}"/>`;
+  for(let i=sp;i<h;i+=sp) s+=`<line x1="${x}" y1="${y+i}" x2="${x+w}" y2="${y+i}"/>`;
+  s+=`</g>`;
+  return s;
+}
+function svgBlinds(x,y,w,h,color){
+  // Горизонтальные жалюзи — ламели
+  const slat=3.5, gap=1.2; // высота ламели и зазор
+  const step=slat+gap;
+  const fill=color||'#ffffff';
+  const stroke=fill==='#ffffff'?'#d0d0d0':'#00000030';
+  let s=`<g opacity="0.85">`;
+  // Верхний карниз
+  s+=`<rect x="${x+1}" y="${y+1}" width="${w-2}" height="${4}" rx="1" fill="#c8c8c8" stroke="#aaa" stroke-width="0.3"/>`;
+  // Ламели
+  for(let py=y+6;py+slat<y+h;py+=step){
+    s+=`<rect x="${x+2}" y="${py}" width="${w-4}" height="${slat}" rx="0.5" fill="${fill}" stroke="${stroke}" stroke-width="0.3"/>`;
+  }
+  s+=`</g>`;
+  return s;
+}
+function svgRollerShade(x,y,w,h,color,blackout){
+  // Рулонная штора — полотно сверху ~80% высоты
+  const fill=color||'#ffffff';
+  const shadeH=h*0.8;
+  const stroke=fill==='#ffffff'?'#d0d0d0':'#00000020';
+  let s=`<g opacity="${blackout?1:0.7}">`;
+  // Кассета сверху
+  s+=`<rect x="${x+1}" y="${y+1}" width="${w-2}" height="${5}" rx="1.5" fill="#b0b0b0" stroke="#999" stroke-width="0.3"/>`;
+  // Полотно
+  s+=`<rect x="${x+2}" y="${y+6}" width="${w-4}" height="${shadeH-6}" rx="0" fill="${fill}" stroke="${stroke}" stroke-width="0.3"/>`;
+  // Надпись BLACKOUT по центру полотна
+  if(blackout){
+    const cx=x+w/2, cy=y+6+(shadeH-6)/2;
+    const fs=Math.min(w*0.18,shadeH*0.12,14);
+    s+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="${fs}" font-weight="bold" fill="#fff" opacity="0.45" letter-spacing="2">BLACKOUT</text>`;
+  }
+  // Нижняя планка
+  s+=`<rect x="${x+2}" y="${y+shadeH}" width="${w-4}" height="${2.5}" rx="0.5" fill="#b0b0b0" stroke="#999" stroke-width="0.3"/>`;
+  s+=`</g>`;
+  return s;
+}
+// Draw sash frame (mitered like admin) + opening lines + handle
+function svgSash(gx,gy,gw,gh,sash,fw){
+  if(!sash)return '';
+  let s='';
+  const sf=5, ov=2; // sash frame width, overlap onto main frame
+  const sx=gx-ov, sy=gy-ov, sw=gw+2*ov, sh=gh+2*ov;
+  const lam=getLamColor();
+  const fc=lam.inner, sc=darken(fc,40), mc=darken(fc,20);
+  // Sash frame — 4 trapezoids with mitered corners (like svgFrame)
+  s+=`<polygon points="${sx},${sy} ${sx+sw},${sy} ${sx+sw-sf},${sy+sf} ${sx+sf},${sy+sf}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  s+=`<polygon points="${sx+sw},${sy} ${sx+sw},${sy+sh} ${sx+sw-sf},${sy+sh-sf} ${sx+sw-sf},${sy+sf}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  s+=`<polygon points="${sx+sw},${sy+sh} ${sx},${sy+sh} ${sx+sf},${sy+sh-sf} ${sx+sw-sf},${sy+sh-sf}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  s+=`<polygon points="${sx},${sy+sh} ${sx},${sy} ${sx+sf},${sy+sf} ${sx+sf},${sy+sh-sf}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  // Miter lines (diagonal welding seams)
+  s+=`<line x1="${sx}" y1="${sy}" x2="${sx+sf}" y2="${sy+sf}" stroke="${mc}" stroke-width="0.6"/>`;
+  s+=`<line x1="${sx+sw}" y1="${sy}" x2="${sx+sw-sf}" y2="${sy+sf}" stroke="${mc}" stroke-width="0.6"/>`;
+  s+=`<line x1="${sx+sw}" y1="${sy+sh}" x2="${sx+sw-sf}" y2="${sy+sh-sf}" stroke="${mc}" stroke-width="0.6"/>`;
+  s+=`<line x1="${sx}" y1="${sy+sh}" x2="${sx+sf}" y2="${sy+sh-sf}" stroke="${mc}" stroke-width="0.6"/>`;
+  // Glass corners (inside sash frame)
+  const ix=sx+sf,iy=sy+sf,iw=sw-2*sf,ih=sh-2*sf;
+  const tl=[ix,iy],tr=[ix+iw,iy],bl=[ix,iy+ih],br=[ix+iw,iy+ih];
+  const tc=[ix+iw/2,iy]; // top center
+  // Handle position: on sash frame axis (middle of profile strip)
+  // Left opening = handle on RIGHT side, Right opening = handle on LEFT
+  let hp;
+  if(sash.dir==='left') hp=[sx+sw-sf/2,sy+sh/2]; else hp=[sx+sf/2,sy+sh/2];
+  // Opening lines
+  s+=`<g stroke="#1a3a6a" stroke-width="0.8" fill="none">`;
+  if(sash.type==='swing'||sash.type==='tilt-turn'){
+    if(sash.dir==='left'){
+      s+=`<line x1="${tl[0]}" y1="${tl[1]}" x2="${hp[0]}" y2="${hp[1]}"/>`;
+      s+=`<line x1="${bl[0]}" y1="${bl[1]}" x2="${hp[0]}" y2="${hp[1]}"/>`;
+    }else{
+      s+=`<line x1="${tr[0]}" y1="${tr[1]}" x2="${hp[0]}" y2="${hp[1]}"/>`;
+      s+=`<line x1="${br[0]}" y1="${br[1]}" x2="${hp[0]}" y2="${hp[1]}"/>`;
+    }
+  }
+  if(sash.type==='tilt-turn'||sash.type==='tilt'){
+    s+=`<line x1="${bl[0]}" y1="${bl[1]}" x2="${tc[0]}" y2="${tc[1]}"/>`;
+    s+=`<line x1="${br[0]}" y1="${br[1]}" x2="${tc[0]}" y2="${tc[1]}"/>`;
+  }
+  s+=`</g>`;
+  // Handle — vertical bar on sash frame axis, white like profile
+  const hLen=Math.min(sh*0.3,18), hW=2;
+  s+=`<rect x="${hp[0]-hW/2}" y="${hp[1]-hLen/2}" width="${hW}" height="${hLen}" fill="${fc}" stroke="${sc}" stroke-width="0.3" rx="0.5"/>`;
+  return s;
+}
+
+function svgSlopes(x,y,w,h,depth){
+  const fc='#f5f5f0', sc='#c0c0c0';
+  const fp=3;
+  let s='';
+  // Фильтры теней
+  s+=`<defs>
+    <filter id="shSlope" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="#00000025"/></filter>
+    <filter id="shFrame" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#00000030"/></filter>
+    <filter id="shSill" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000035"/></filter>
+  </defs>`;
+  // Откосы с тенью (тень от откосов на стену)
+  s+=`<g filter="url(#shSlope)">`;
+  s+=`<polygon points="${x-depth},${y-depth} ${x+w+depth},${y-depth} ${x+w},${y} ${x},${y}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  s+=`<polygon points="${x-depth},${y-depth} ${x},${y} ${x},${y+h} ${x-depth},${y+h+depth}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  s+=`<polygon points="${x+w+depth},${y-depth} ${x+w+depth},${y+h+depth} ${x+w},${y+h} ${x+w},${y}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+  s+=`</g>`;
+  // Внутренние тени на откосах (от рамы на откос — градиент затемнения у рамы)
+  s+=`<defs>
+    <linearGradient id="shTop" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.08"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+    <linearGradient id="shLeft" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+    <linearGradient id="shRight" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+  </defs>`;
+  s+=`<polygon points="${x-depth},${y-depth} ${x+w+depth},${y-depth} ${x+w},${y} ${x},${y}" fill="url(#shTop)"/>`;
+  s+=`<polygon points="${x-depth},${y-depth} ${x},${y} ${x},${y+h} ${x-depth},${y+h+depth}" fill="url(#shLeft)"/>`;
+  s+=`<polygon points="${x+w+depth},${y-depth} ${x+w+depth},${y+h+depth} ${x+w},${y+h} ${x+w},${y}" fill="url(#shRight)"/>`;
+  // F-профиль
+  const ffc='#ffffff', fsc='#b0b0b0';
+  s+=`<rect x="${x-depth-fp}" y="${y-depth-fp}" width="${w+2*depth+2*fp}" height="${fp}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+  s+=`<rect x="${x-depth-fp}" y="${y-depth-fp}" width="${fp}" height="${h+2*depth+2*fp}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+  s+=`<rect x="${x+w+depth}" y="${y-depth-fp}" width="${fp}" height="${h+2*depth+2*fp}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+  return s;
+}
+function svgSill(x,y,w,depth,color){
+  const fc=color||'#ffffff', sc='#b0b0b0';
+  const overhang=depth*0.15;
+  let s='';
+  // Подоконник с тенью
+  s+=`<g filter="url(#shSill)">`;
+  s+=`<polygon points="${x-depth-overhang},${y+depth} ${x+w+depth+overhang},${y+depth} ${x+w},${y} ${x},${y}" fill="${fc}" stroke="${sc}" stroke-width="0.7"/>`;
+  s+=`<rect x="${x-depth-overhang}" y="${y+depth}" width="${w+2*depth+2*overhang}" height="${6}" rx="0.5" fill="${darken(fc,15)}" stroke="${sc}" stroke-width="0.5"/>`;
+  s+=`</g>`;
+  return s;
+}
+function drawPreview(){
+  _sceneDefs=false; // сброс для новой отрисовки
+  const el=document.getElementById('winPreview');
+  const type=selectedType;
+  const tp=WIN_TYPES.find(x=>x.id===type);
+  const maxW=320, maxH=220;
+  // Проверка габаритов
+  const dw=document.getElementById('dimWarning');
+  let warns=[];
+  if(type==='balcony'){
+    const bwW=parseInt(document.getElementById('cBwinW').value)||0;
+    const bdW=parseInt(document.getElementById('cBdoorW').value)||0;
+    const bdH=parseInt(document.getElementById('cBdoorH').value)||0;
+    if(bwW+bdW>3000) warns.push('ширина конструкции');
+    if(bdH>2500) warns.push('высота конструкции');
+  }else{
+    const cW=parseInt(document.getElementById('cWidth').value)||0;
+    const cH=parseInt(document.getElementById('cHeight').value)||0;
+    if(cW>3000) warns.push('ширина');
+    if(cH>2500) warns.push('высота');
+  }
+  if(warns.length){
+    dw.style.display='';
+    dw.textContent='Превышены габариты ('+warns.join(', ')+'), для уточнения возможности изготовления свяжитесь с нами';
+    calcClientPrice();
+    return;
+  }else{dw.style.display='none';}
+  const fw=8, mw=6; // frame width, mullion width in px
+
+  if(type==='balcony'){
+    const wW=parseInt(document.getElementById('cBwinW').value)||1400;
+    const wH=parseInt(document.getElementById('cBwinH').value)||1400;
+    const dW=parseInt(document.getElementById('cBdoorW').value)||700;
+    const dH=parseInt(document.getElementById('cBdoorH').value)||2100;
+    const totalW=wW+dW, totalH=dH;
+    const sc=Math.min(maxW/totalW,maxH/totalH);
+    const dwPx=Math.round(dW*sc), dhPx=Math.round(dH*sc);
+    const wwPx=Math.round(wW*sc), whPx=Math.round(wH*sc);
+    const sw=dwPx+wwPx, sh=dhPx;
+    const wx0=dwPx+mw; // окно начинается сразу после импоста
+    const bsl=getBalconySashLayout(selectedSashes, tp.parts);
+    const showSlopes=document.getElementById('cSlopes').checked;
+    const showSill=document.getElementById('cSill').checked;
+    const slopeD=7, sillD=slopeD*2;
+    const wallPad=20;
+    const padBot=showSlopes?slopeD+12:wallPad;
+    const svgW=sw+mw; // полная ширина: дверь + импост + окно
+    let svg=`<svg width="${svgW+60+wallPad*2}" height="${sh+40+wallPad+padBot}" viewBox="${-30-wallPad} ${-5-wallPad} ${svgW+60+wallPad*2} ${sh+40+wallPad+padBot}">`;
+    // Стена — фон с освещением от окна
+    const wallColor=document.getElementById('cWallColor').value||'#f5f0e8';
+    const vbX=-30-wallPad, vbY=-5-wallPad, vbW=svgW+60+wallPad*2, vbH=sh+40+wallPad+padBot;
+    svg+=`<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="${wallColor}"/>`;
+    svg+=`<defs><radialGradient id="winLight" cx="50%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.08"/>
+    </radialGradient></defs>`;
+    svg+=`<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="url(#winLight)"/>`;
+    // Откосы и подоконник для балкона (кастомная отрисовка)
+    if(showSlopes||showSill){
+      const d=slopeD, fc='#f5f5f0', sc='#c0c0c0', fp=3, ffc='#ffffff', fsc='#b0b0b0';
+      const fullW=sw+mw;
+      svg+=`<defs>
+        <filter id="shSlope" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="#00000025"/></filter>
+        <filter id="shFrame" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#00000030"/></filter>
+        <filter id="shSill" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000035"/></filter>
+        <linearGradient id="shTop" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.08"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+        <linearGradient id="shLeft" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+        <linearGradient id="shRight" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+      </defs>`;
+      if(showSlopes){
+        const rEdge=wx0+wwPx; // правый край рамы окна
+        svg+=`<g filter="url(#shSlope)">`;
+        // Верхний откос — на всю ширину
+        svg+=`<polygon points="${-d},${-d} ${rEdge+d},${-d} ${rEdge},0 0,0" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+        // Левый откос — на всю высоту двери
+        svg+=`<polygon points="${-d},${-d} 0,0 0,${dhPx} ${-d},${dhPx+d}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+        // Правый откос окна — только до подоконника
+        svg+=`<polygon points="${rEdge+d},${-d} ${rEdge+d},${whPx} ${rEdge},${whPx} ${rEdge},0" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+        // Правый откос двери — из-под подоконника до низа (от wx0, за импостом)
+        svg+=`<polygon points="${wx0+d},${whPx} ${wx0+d},${dhPx} ${wx0},${dhPx} ${wx0},${whPx}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+        // Нижняя панель двери
+        svg+=`<polygon points="${-d},${dhPx+d} ${wx0+d},${dhPx+d} ${wx0},${dhPx} 0,${dhPx}" fill="${fc}" stroke="${sc}" stroke-width="0.5"/>`;
+        svg+=`</g>`;
+        // Внутренние тени
+        svg+=`<polygon points="${-d},${-d} ${rEdge+d},${-d} ${rEdge},0 0,0" fill="url(#shTop)"/>`;
+        svg+=`<polygon points="${-d},${-d} 0,0 0,${dhPx} ${-d},${dhPx+d}" fill="url(#shLeft)"/>`;
+        svg+=`<polygon points="${rEdge+d},${-d} ${rEdge+d},${whPx} ${rEdge},${whPx} ${rEdge},0" fill="url(#shRight)"/>`;
+        svg+=`<polygon points="${wx0+d},${whPx} ${wx0+d},${dhPx} ${wx0},${dhPx} ${wx0},${whPx}" fill="url(#shRight)"/>`;
+        // F-профиль: верх, лево, право окна, право двери (под подоконником), низ двери
+        svg+=`<rect x="${-d-fp}" y="${-d-fp}" width="${rEdge+2*d+2*fp}" height="${fp}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+        svg+=`<rect x="${-d-fp}" y="${-d-fp}" width="${fp}" height="${dhPx+2*d+2*fp}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+        svg+=`<rect x="${rEdge+d}" y="${-d-fp}" width="${fp}" height="${whPx+d+fp}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+        svg+=`<rect x="${wx0+d}" y="${whPx}" width="${fp}" height="${dhPx-whPx+d}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+        svg+=`<rect x="${-d-fp}" y="${dhPx+d}" width="${wx0+2*d+2*fp}" height="${fp}" fill="${ffc}" stroke="${fsc}" stroke-width="0.4"/>`;
+      }
+      if(showSill){
+        // Подоконник только под окном: от импоста до правого края
+        const sillColor=document.getElementById('cSillColor').value||'#ffffff';
+        const sillX=wx0; // от правого края импоста
+        const sillW=wwPx; // ширина окна
+        svg+=svgSill(sillX,whPx,sillW,sillD,sillColor);
+        svg+=`<defs><linearGradient id="sillShadow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#000" stop-opacity="0.15"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></linearGradient></defs>`;
+        svg+=`<rect x="${sillX-sillD-2}" y="${whPx+sillD+6}" width="${sillW+2*sillD+4}" height="${15}" fill="url(#sillShadow)"/>`;
+      }
+    }
+    // Door frame (без правой стороны — там импост)
+    svg+=svgFrame(0,0,dwPx,dhPx,fw,'right');
+    const dGx=fw, dGy=fw, dGw=dwPx-fw, dGh=dhPx-2*fw;
+    svg+=svgGlass(dGx,dGy,dGw,dGh);
+    svg+=svgSash(dGx,dGy,dGw,dGh,bsl.door,fw);
+    // Импост между дверью и окном
+    svg+=svgMullion(dwPx,0,mw,dhPx);
+    // Window frame (без левой стороны — там импост)
+    svg+=svgFrame(wx0,0,wwPx,whPx,fw,'left');
+    // Window panes: стёкла начинаются от импоста (без левой рамки)
+    const parts=tp.parts;
+    const innerW=wwPx-fw, innerH=whPx-2*fw;
+    const paneW=(innerW-(parts-1)*mw)/parts;
+    for(let i=0;i<parts;i++){
+      const px=wx0+i*(paneW+mw);
+      svg+=svgGlass(px,fw,paneW,innerH);
+    }
+    for(let i=0;i<parts-1;i++){
+      const px=wx0+i*(paneW+mw);
+      svg+=svgMullion(px+paneW,fw,mw,innerH);
+    }
+    for(let i=0;i<parts;i++){
+      const px=wx0+i*(paneW+mw);
+      svg+=svgSash(px,fw,paneW,innerH,bsl.win[i],fw);
+    }
+    // Mosquito nets on window sashes only (not door)
+    const netCount=parseInt(document.getElementById('cMosquito').value)||0;
+    if(netCount>0){
+      let drawn=0;
+      for(let i=0;i<parts&&drawn<netCount;i++){
+        if(bsl.win[i]){
+          const px=wx0+i*(paneW+mw);
+          svg+=svgMosquito(px,fw,paneW,innerH);
+          drawn++;
+        }
+      }
+    }
+    // Балкон: общие части = [дверь, окно1, окно2...]
+    // Жалюзи занимают первые N, шторы — следующие
+    const bBlinds=parseInt(document.getElementById('cBlinds').value)||0;
+    const bRolls=parseInt(document.getElementById('cRolls').value)||0;
+    // Собираем координаты всех частей балкона
+    const balcPanes=[{x:fw,y:fw,w:dwPx-fw,h:dhPx-2*fw}]; // дверь (до импоста)
+    for(let i=0;i<parts;i++) balcPanes.push({x:wx0+i*(paneW+mw),y:fw,w:paneW,h:innerH});
+    if(bBlinds>0){
+      const bColor=document.querySelector('input[name="blindColor"]:checked');
+      const bc=bColor?bColor.value:'#ffffff';
+      for(let i=0;i<bBlinds&&i<balcPanes.length;i++){
+        const p=balcPanes[i];
+        svg+=svgBlinds(p.x,p.y,p.w,p.h,bc);
+      }
+    }
+    if(bRolls>0){
+      const rColor=document.querySelector('input[name="rollColor"]:checked');
+      const rc=rColor?(rColor.dataset.color||rColor.value):'#ffffff';
+      const rBo=rColor&&rColor.dataset.blackout==='1';
+      for(let i=0;i<bRolls&&(bBlinds+i)<balcPanes.length;i++){
+        const p=balcPanes[bBlinds+i];
+        svg+=svgRollerShade(p.x,p.y,p.w,p.h,rc,rBo);
+      }
+    }
+    // Линия пола под дверью
+    const floorY=dhPx+(showSlopes?slopeD:0)+3;
+    const vbX2=-30-wallPad, vbW2=svgW+60+wallPad*2;
+    svg+=`<line x1="${vbX2}" y1="${floorY}" x2="${vbX2+vbW2}" y2="${floorY}" stroke="#b0a898" stroke-width="1.5"/>`;
+    svg+=`<line x1="${vbX2}" y1="${floorY+1}" x2="${vbX2+vbW2}" y2="${floorY+1}" stroke="#c8c0b4" stroke-width="0.5"/>`;
+    // Dimensions
+    svg+=`<text x="${dwPx/2}" y="${dhPx+16}" text-anchor="middle" font-size="10" fill="#888">${dW}</text>`;
+    svg+=`<text x="${wx0+wwPx/2}" y="${whPx+16}" text-anchor="middle" font-size="10" fill="#888">${wW}</text>`;
+    svg+=`<text x="-8" y="${dhPx/2}" text-anchor="middle" font-size="10" fill="#888" transform="rotate(-90,-8,${dhPx/2})">${dH}</text>`;
+    svg+=`<text x="${wx0+wwPx+8}" y="${whPx/2}" text-anchor="middle" font-size="10" fill="#888" transform="rotate(90,${wx0+wwPx+8},${whPx/2})">${wH}</text>`;
+    svg+='</svg>';
+    el.innerHTML=svg;
+  }else{
+    const w=parseInt(document.getElementById('cWidth').value)||1400;
+    const h=parseInt(document.getElementById('cHeight').value)||1400;
+    const sc=Math.min(maxW/w,maxH/h);
+    const sw=Math.round(w*sc), sh=Math.round(h*sc);
+    const parts=tp.parts;
+    const sashes=getSashLayout(type,selectedSashes,parts);
+    const showSlopes=document.getElementById('cSlopes').checked;
+    const showSill=document.getElementById('cSill').checked;
+    const slopeD=7, sillD=slopeD*2;
+    const wallPad=20; // стена вокруг окна
+    const padBot=showSill?sillD+12:wallPad;
+    let svg=`<svg width="${sw+60+wallPad*2}" height="${sh+30+wallPad+padBot}" viewBox="${-30-wallPad} ${-5-wallPad} ${sw+60+wallPad*2} ${sh+30+wallPad+padBot}">`;
+    // Стена — фон с освещением от окна
+    const wallColor=document.getElementById('cWallColor').value||'#f5f0e8';
+    const vbX=-30-wallPad, vbY=-5-wallPad, vbW=sw+60+wallPad*2, vbH=sh+30+wallPad+padBot;
+    svg+=`<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="${wallColor}"/>`;
+    // Свет из окна — радиальное освещение стены
+    svg+=`<defs><radialGradient id="winLight" cx="50%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.08"/>
+    </radialGradient></defs>`;
+    svg+=`<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="url(#winLight)"/>`;
+    // Откосы и подоконник — поверх стены
+    if(showSlopes) svg+=svgSlopes(0,0,sw,sh,slopeD);
+    if(showSill){
+      const sillColor=document.getElementById('cSillColor').value||'#ffffff';
+      svg+=svgSill(0,sh,sw,sillD,sillColor);
+      // Тень под подоконником на стену
+      svg+=`<defs><linearGradient id="sillShadow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#000" stop-opacity="0.15"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></linearGradient></defs>`;
+      svg+=`<rect x="${-sillD-2}" y="${sh+sillD+6}" width="${sw+2*sillD+4}" height="${15}" fill="url(#sillShadow)"/>`;
+    }
+    // Outer frame с тенью
+    svg+=`<g filter="url(#shFrame)">`;
+    svg+=svgFrame(0,0,sw,sh,fw);
+    svg+=`</g>`;
+    // Inner panes: glass → mullions → sashes on top
+    const innerW=sw-2*fw, innerH=sh-2*fw;
+    const paneW=(innerW-(parts-1)*mw)/parts;
+    for(let i=0;i<parts;i++){
+      svg+=svgGlass(fw+i*(paneW+mw),fw,paneW,innerH);
+    }
+    for(let i=0;i<parts-1;i++){
+      svg+=svgMullion(fw+i*(paneW+mw)+paneW,fw,mw,innerH);
+    }
+    for(let i=0;i<parts;i++){
+      svg+=svgSash(fw+i*(paneW+mw),fw,paneW,innerH,sashes[i],fw);
+    }
+    // Mosquito nets on sash panes only
+    const netCount=parseInt(document.getElementById('cMosquito').value)||0;
+    if(netCount>0){
+      let drawn=0;
+      for(let i=0;i<parts&&drawn<netCount;i++){
+        if(sashes[i]){
+          svg+=svgMosquito(fw+i*(paneW+mw),fw,paneW,innerH);
+          drawn++;
+        }
+      }
+    }
+    // Жалюзи горизонтальные
+    const blindsCount=parseInt(document.getElementById('cBlinds').value)||0;
+    if(blindsCount>0){
+      const bColor=document.querySelector('input[name="blindColor"]:checked');
+      const bc=bColor?bColor.value:'#ffffff';
+      for(let i=0;i<Math.min(blindsCount,parts);i++){
+        svg+=svgBlinds(fw+i*(paneW+mw),fw,paneW,innerH,bc);
+      }
+    }
+    // Рулонные шторы — на частях после жалюзи
+    const rollsCount=parseInt(document.getElementById('cRolls').value)||0;
+    if(rollsCount>0){
+      const rColor=document.querySelector('input[name="rollColor"]:checked');
+      const rc=rColor?(rColor.dataset.color||rColor.value):'#ffffff';
+      const rBo=rColor&&rColor.dataset.blackout==='1';
+      const rollStart=blindsCount; // шторы идут после жалюзи
+      for(let i=0;i<Math.min(rollsCount,parts-rollStart);i++){
+        svg+=svgRollerShade(fw+(rollStart+i)*(paneW+mw),fw,paneW,innerH,rc,rBo);
+      }
+    }
+    // Dimensions outside
+    svg+=`<text x="${sw/2}" y="${sh+16}" text-anchor="middle" font-size="10" fill="#888">${w}</text>`;
+    svg+=`<text x="-8" y="${sh/2}" text-anchor="middle" font-size="10" fill="#888" transform="rotate(-90,-8,${sh/2})">${h}</text>`;
+    svg+='</svg>';
+    el.innerHTML=svg;
+  }
+  calcClientPrice();
+}
+
+function calcClientPrice(){
+  const localData=JSON.parse(localStorage.getItem('okna_components')||'{}');
+  const data=sheetPrices||localData;
+  const type=selectedType;
+  let w,h;
+  if(type==='balcony'){
+    const bwW=parseInt(document.getElementById('cBwinW').value)||1400;
+    const bwH=parseInt(document.getElementById('cBwinH').value)||1400;
+    const bdW=parseInt(document.getElementById('cBdoorW').value)||700;
+    const bdH=parseInt(document.getElementById('cBdoorH').value)||2100;
+    w=bwW+bdW; h=Math.max(bwH,bdH);
+  }else{
+    w=parseInt(document.getElementById('cWidth').value)||1400;
+    h=parseInt(document.getElementById('cHeight').value)||1400;
+  }
+  const profile=document.getElementById('cProfile').value;
+  const glazing=document.getElementById('cGlazing').value;
+  const slopes=document.getElementById('cSlopes').checked;
+  const sill=document.getElementById('cSill').checked;
+  const drip=document.getElementById('cDrip').checked;
+  const install=document.getElementById('cInstall').checked;
+  const delivery=document.getElementById('cDelivery').checked;
+
+  // Build price from components
+  const area=w*h/1e6;
+  const glazMap={single:'4м1-16-4м1',double:'4м1-10-4м1-10-4м1',energy:'4м1-16-4м1(i)'};
+  const glazKey=glazMap[glazing]||'4м1-16-4м1';
+  const baseKey='base_'+profile+'_'+glazKey;
+  const basePm2=data[baseKey]||0;
+
+  let total=0, lines=[];
+
+  if(!basePm2){
+    document.getElementById('clientResult').style.display='';
+    document.getElementById('clientTotal').textContent='0 руб.';
+    document.getElementById('orderBtn').style.display='';
+    document.getElementById('clientBreakdown').innerHTML='';
+    return;
+  }
+
+  // Base window price
+  const basePrice=Math.round(basePm2*area);
+  lines.push({label:'Окно ('+basePm2+' × '+area.toFixed(2)+' м²)',value:basePrice});
+
+  // Sashes from user selection
+  const sashCost=selectedSashes*(data.sash_tiltturn||0);
+  if(sashCost) lines.push({label:'Створки п/о ×'+selectedSashes,value:sashCost});
+
+  // Mullions: parts - 1
+  const wt=WIN_TYPES.find(x=>x.id===type);
+  const mullionCount=wt?(wt.parts-1):0;
+  const mullionCost=mullionCount*(data.mullion||0);
+  if(mullionCost) lines.push({label:'Импосты ×'+mullionCount,value:mullionCost});
+
+  // Mosquito nets
+  const netCount=parseInt(document.getElementById('cMosquito').value)||0;
+  const netCost=netCount>0?netCount*(data.mosquito||0):0;
+  if(netCost) lines.push({label:'Сетки ×'+netCount,value:netCost});
+
+  // Жалюзи горизонтальные (цена с установкой из таблицы, фоллбек 1999)
+  const blindsQty=parseInt(document.getElementById('cBlinds').value)||0;
+  const blindsFullPrice=data.blinds_price||1999;
+  const blindsCost=blindsQty*blindsFullPrice;
+  if(blindsCost) lines.push({label:'Жалюзи ×'+blindsQty,value:blindsCost});
+
+  // Рулонные шторы (цена по цвету из таблицы)
+  const rollsQty=parseInt(document.getElementById('cRolls').value)||0;
+  const rollColorSel=document.querySelector('input[name="rollColor"]:checked');
+  const rollColorKey=rollColorSel?rollColorSel.value:'white';
+  const rollsFullPrice=data['rolls_price_'+rollColorKey]||data.rolls_price||1899;
+  const rollsCost=rollsQty*rollsFullPrice;
+  if(rollsCost) lines.push({label:'Шторы рулонные ×'+rollsQty,value:rollsCost});
+
+  // Ламинация — % наценка на базу, импост, створку
+  const lam=getLamColor();
+  const lamOuter=lam.outer!=='#f0f0ec';
+  const lamInner=lam.inner!=='#f0f0ec';
+  const lamSides=lamOuter&&lamInner?2:(lamOuter||lamInner?1:0);
+  let lamCost=0;
+  if(lamSides>0){
+    const pfx=lamSides===2?'lam_two_':'lam_one_';
+    const basePct=data[pfx+'base_pct']||0;
+    const mullPct=data[pfx+'mullion_pct']||0;
+    const sashPct=data[pfx+'sash_pct']||0;
+    const lamBase=Math.round(basePrice*basePct/100);
+    const lamMull=Math.round(mullionCost*mullPct/100);
+    const lamSash=Math.round(sashCost*sashPct/100);
+    lamCost=lamBase+lamMull+lamSash;
+    const lamLabel=lamSides===2?'Ламинация двуст.':'Ламинация одност.';
+    if(lamCost) lines.push({label:lamLabel,value:lamCost});
+  }
+
+  let winPrice=basePrice+sashCost+mullionCost+netCost+lamCost;
+
+  // Markup — from Google Sheet or admin settings (НЕ на жалюзи/шторы — они уже с наценкой)
+  const mT=sheetPrices?'percent':document.getElementById('markupType').value;
+  const mV=sheetPrices?(data.markup_percent||0):(parseFloat(document.getElementById('markupValue').value)||0);
+  let profitAmount=0;
+  if(mV>0){
+    profitAmount=mT==='percent'?Math.round(winPrice*mV/100):mV;
+    winPrice+=profitAmount;
+    lines.push({label:'Наценка'+(mT==='percent'?' '+mV+'%':''),value:profitAmount});
+  }
+
+  // Жалюзи/шторы добавляются ПОСЛЕ наценки
+  winPrice+=blindsCost+rollsCost;
+
+  total+=winPrice;
+
+  // Finishing — calculated by dimensions
+  // Balcony: откосы = 2 высоты двери + ширина окна + ширина двери
+  //          подоконник = ширина окна, отлив = ширина окна
+  // Обычное: откосы = 2 высоты + 1 ширина, подоконник = ширина, отлив = ширина
+  let slopesLen, sillLen, dripLen;
+  if(type==='balcony'){
+    const bwW=parseInt(document.getElementById('cBwinW').value)||1400;
+    const bdW=parseInt(document.getElementById('cBdoorW').value)||700;
+    const bdH=parseInt(document.getElementById('cBdoorH').value)||2100;
+    slopesLen=2*(bdH/1000)+(bwW/1000)+(bdW/1000);
+    sillLen=bwW/1000;
+    dripLen=bwW/1000;
+  }else{
+    const wM=w/1000, hM=h/1000;
+    slopesLen=2*hM+wM;
+    sillLen=wM;
+    dripLen=wM;
+  }
+  if(slopes){
+    const sp=Math.round((data.slopes_pm||0)*slopesLen);
+    if(sp){lines.push({label:'Откосы ('+slopesLen.toFixed(1)+' п.м.)',value:sp});total+=sp;}
+  }
+  if(sill){
+    const sillOpt=document.getElementById('cSillColor').selectedOptions[0];
+    const sillKey=sillOpt?sillOpt.dataset.key:'';
+    const sillPm=sillKey?(data[sillKey]||data.sill_pm||0):(data.sill_pm||0);
+    const sp=Math.round(sillPm*sillLen);
+    if(sp){lines.push({label:'Подоконник ('+sillLen.toFixed(1)+' п.м.)',value:sp});total+=sp;}
+  }
+  if(drip){
+    const dp=Math.round((data.drip_pm||0)*dripLen);
+    if(dp){lines.push({label:'Отлив ('+dripLen.toFixed(1)+' п.м.)',value:dp});total+=dp;}
+  }
+
+  // Services
+  if(install){
+    const ip=Math.round((data.install_pm2||0)*area);
+    if(ip){lines.push({label:'Установка ('+area.toFixed(2)+' м²)',value:ip});total+=ip;}
+  }
+  if(delivery){
+    const dp=data.delivery||0;
+    if(dp){lines.push({label:'Доставка',value:dp});total+=dp;}
+  }
+
+  const profit=profitAmount;
+
+  const res=document.getElementById('clientResult');
+  res.style.display='';
+  document.getElementById('clientTotal').textContent=total.toLocaleString()+' руб.';
+  document.getElementById('clientBreakdown').innerHTML='';
+  document.getElementById('orderBtn').style.display='';
+  // Debug in console (F12)
+  console.table(lines);
+  console.log('Итого:',total,'Прибыль:',profit);
+
+  // Send to Google Sheets
+  const glazNames={single:'Однокамерный',double:'Двухкамерный',energy:'Энергосберегающий'};
+  const typeNames={single:'Одинарное',double:'Двухчастное',triple:'Трёхчастное',balcony:'Балконный блок'};
+  let sizeStr;
+  if(type==='balcony'){
+    sizeStr=(document.getElementById('cBwinW').value||1400)+'×'+(document.getElementById('cBwinH').value||1400)+' + дверь '+(document.getElementById('cBdoorW').value||700)+'×'+(document.getElementById('cBdoorH').value||2100);
+  }else{
+    sizeStr=(document.getElementById('cWidth').value||1400)+'×'+(document.getElementById('cHeight').value||1400);
+  }
+  const extras=[];
+  if(slopes)extras.push('откосы');
+  if(sill)extras.push('подоконник');
+  if(drip)extras.push('отлив');
+  if(install)extras.push('установка');
+  if(delivery)extras.push('доставка');
+  if(netCount>0)extras.push('сетки: '+netCount);
+  if(blindsQty>0)extras.push('жалюзи: '+blindsQty);
+  if(rollsQty>0)extras.push('шторы: '+rollsQty);
+  if(lamSides===1)extras.push('ламинация одност.');
+  if(lamSides===2)extras.push('ламинация двуст.');
+  // Get IP and send
+  fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{
+    fetch('https://script.google.com/macros/s/AKfycbxfZfdjrNPdFSV36GtvB_cs3UBjfLy7iid0BjaBF2MHZIjMGdMKOpOWQhasUnI8hDlD2Q/exec',{
+      method:'POST', mode:'no-cors',
+      body:JSON.stringify({
+        ip:d.ip,
+        type:typeNames[type]||type,
+        size:sizeStr,
+        glazing:glazNames[glazing]||glazing,
+        sashes:selectedSashes,
+        nets:netCount,
+        price:total,
+        profit:profit,
+        extras:extras.join(', ')
+      })
+    });
+  }).catch(()=>{});
+}
+function saveSettings(){localStorage.setItem('okna_settings',JSON.stringify({markupType:document.getElementById('markupType').value,markupValue:parseFloat(document.getElementById('markupValue').value)||0}));}
+
+// ========== GOOGLE SHEETS PRICES ==========
+const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRz-SO0rLEgvdcJx5MbILqQ9oacz3g8GYlFlFZYP5rvL7acplung7SJYBcRLXVuFVwxpV1gxIo2ARsw/pub?gid=0&single=true&output=csv';
+// Лист "Конкуренты" — замени gid после создания листа (Файл → Поделиться → Опубликовать → выбрать лист Конкуренты)
+const COMP_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRz-SO0rLEgvdcJx5MbILqQ9oacz3g8GYlFlFZYP5rvL7acplung7SJYBcRLXVuFVwxpV1gxIo2ARsw/pub?gid=1370719884&single=true&output=csv';
+let sheetPrices=null;
+
+function loadSheetPrices(){
+  fetch(SHEET_CSV_URL).then(r=>r.text()).then(csv=>{
+    sheetPrices={};
+    // Map short names to formula keys
+    const keyMap={
+      'base_Brusbox 60_однокам':'base_Brusbox 60_4м1-16-4м1',
+      'base_Brusbox 60_двухкам':'base_Brusbox 60_4м1-10-4м1-10-4м1',
+      'base_Brusbox 60_энерго':'base_Brusbox 60_4м1-16-4м1(i)'
+    };
+    csv.split('\n').slice(1).forEach(line=>{
+      const parts=line.split(',');
+      if(parts.length>=2){
+        const rawKey=parts[0].trim(), val=parseFloat(parts[1]);
+        if(rawKey&&!isNaN(val)){
+          const mappedKey=keyMap[rawKey]||rawKey;
+          sheetPrices[mappedKey]=val;
+        }
+      }
+    });
+    console.log('Цены из таблицы загружены:',sheetPrices);
+    // If loaded from sheet, hide admin tab and show calculator
+    if(Object.keys(sheetPrices).length>0 && !location.protocol.startsWith('file')){
+      document.querySelector('.tabs').style.display='none';
+      document.getElementById('tab-training').classList.remove('active');
+      document.getElementById('tab-training').style.display='none';
+      document.getElementById('tab-calculator').classList.add('active');
+      // Показываем баннер REHAU
+      var banner=document.getElementById('rehauBanner');
+      if(banner) banner.style.display='block';
+    }
+  }).catch(e=>console.warn('Не удалось загрузить цены из Google Sheets:',e));
+}
+
+function loadSheetCompetitors(){
+  if(COMP_CSV_URL.includes('COMPETITORS_GID')) return; // gid ещё не заполнен
+  fetch(COMP_CSV_URL).then(r=>r.text()).then(csv=>{
+    const lines=csv.split('\n').slice(1);
+    if(lines.length===0) return;
+    const competitors=[];
+    lines.forEach(line=>{
+      const p=line.split(',');
+      if(p.length>=5){
+        const id=p[0].trim(), pm2=parseFloat(p[1]), sash=parseFloat(p[2])||0, mull=parseFloat(p[3])||0;
+        const name=p[4]?p[4].trim():'', note=p[5]?p[5].trim():'';
+        if(id&&!isNaN(pm2)&&pm2>0){
+          competitors.push({id, pricePerM2:pm2, sashExtra:sash, mullionExtra:mull, name:name||id, note});
+        }
+      }
+    });
+    if(competitors.length>0){
+      localStorage.setItem('okna_competitors', JSON.stringify(competitors));
+      const date=lines[0].split(',')[6];
+      if(date) localStorage.setItem('okna_competitors_date', date.trim());
+      console.log('Цены конкурентов из таблицы:', competitors.length, 'шт');
+    }
+  }).catch(e=>console.warn('Конкуренты из таблицы не загружены:',e));
+}
+
+function calcPrices(){
+  const est=estimatePrice(designer1);
+  const box=document.getElementById('calcResult');
+  box.style.display='';
+  const pp=document.getElementById('prodPrice');
+  if(!est){pp.textContent='нет данных';
+    ['markupRow','clientRow','profitRow'].forEach(id=>document.getElementById(id).style.display='none');return;}
+  pp.textContent=est.toLocaleString()+' руб.';
+  const mT=document.getElementById('markupType').value,mV=parseFloat(document.getElementById('markupValue').value)||0;
+  if(mV>0){
+    const markup=mT==='percent'?Math.round(est*mV/100):mV;
+    const client=est+markup;
+    document.getElementById('markupRow').style.display='';
+    document.getElementById('clientRow').style.display='';
+    document.getElementById('profitRow').style.display='';
+    document.getElementById('markupDisplay').textContent='+'+markup.toLocaleString()+' руб.';
+    document.getElementById('clientPrice').textContent=client.toLocaleString()+' руб.';
+    document.getElementById('profitValue').textContent=markup.toLocaleString()+' руб.';
+  }else{
+    ['markupRow','clientRow','profitRow'].forEach(id=>document.getElementById(id).style.display='none');
+  }
+  showCompetitorComparison(designer1, est);
+}
+
+// ========== COMPETITOR COMPARISON ==========
+const DEFAULT_COMPETITORS = [
+  {
+    id: 'kaleva_standard',
+    name: 'Калева Стандарт',
+    pricePerM2: 14580,
+    sashExtra: 4000,
+    mullionExtra: 1200,
+    note: 'Малоярославец, Московская 16'
+  },
+  {
+    id: 'kaleva_design',
+    name: 'Калева Дизайн',
+    pricePerM2: 22260,
+    sashExtra: 5000,
+    mullionExtra: 1500,
+    note: 'Премиум линейка'
+  },
+  {
+    id: 'okno_melke60',
+    name: 'О-КНО MELKE 60',
+    pricePerM2: 4250,
+    sashExtra: 2800,
+    mullionExtra: 700,
+    note: '4 камеры 60мм, реклама от 2364'
+  },
+  {
+    id: 'okno_melke70',
+    name: 'О-КНО MELKE Evol.70',
+    pricePerM2: 6900,
+    sashExtra: 3000,
+    mullionExtra: 800,
+    note: '5 камер 70мм, реклама от 3824'
+  },
+  {
+    id: 'okno_rehau_delight',
+    name: 'О-КНО REHAU Delight',
+    pricePerM2: 8800,
+    sashExtra: 3200,
+    mullionExtra: 900,
+    note: '5 камер 70мм, реклама от 4890'
+  },
+  {
+    id: 'okno_kbe_master',
+    name: 'О-КНО KBE Master 70',
+    pricePerM2: 9400,
+    sashExtra: 3100,
+    mullionExtra: 850,
+    note: '4 камеры 70мм, реклама от 5202'
+  },
+  {
+    id: 'okno_rehau_brilliant',
+    name: 'О-КНО REHAU Brilliant',
+    pricePerM2: 11800,
+    sashExtra: 3500,
+    mullionExtra: 1000,
+    note: '5 камер 70мм, реклама от 6560'
+  },
+  {
+    id: 'satels_veka',
+    name: 'Сателс Veka Softline',
+    pricePerM2: 7200,
+    sashExtra: 3000,
+    mullionExtra: 800,
+    note: 'Veka 70мм, реклама от 4000'
+  }
+];
+
+function getCompetitorData() {
+  const saved = JSON.parse(localStorage.getItem('okna_competitors') || 'null');
+  return saved || DEFAULT_COMPETITORS;
+}
+
+function saveCompetitorPrices() {
+  const competitors = getCompetitorData();
+  competitors.forEach(c => {
+    const inp = document.getElementById('comp_' + c.id);
+    if (inp) c.pricePerM2 = parseFloat(inp.value) || 0;
+    const sashInp = document.getElementById('comp_sash_' + c.id);
+    if (sashInp) c.sashExtra = parseFloat(sashInp.value) || 0;
+  });
+  localStorage.setItem('okna_competitors', JSON.stringify(competitors));
+  document.getElementById('competitorEdit').style.display = 'none';
+  // Пересчитать
+  const est = estimatePrice(designer1);
+  if (est) showCompetitorComparison(designer1, est);
+}
+
+function toggleCompetitorEdit() {
+  const el = document.getElementById('competitorEdit');
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? '' : 'none';
+  if (isHidden) buildCompetitorInputs();
+}
+
+function buildCompetitorInputs() {
+  const competitors = getCompetitorData();
+  const container = document.getElementById('competitorInputs');
+  container.innerHTML = competitors.map(c => `
+    <div class="comp-input-row">
+      <label>${c.name}</label>
+      <input id="comp_${c.id}" type="number" value="${c.pricePerM2}" step="100" placeholder="за м²">
+      <input id="comp_sash_${c.id}" type="number" value="${c.sashExtra||0}" step="100" placeholder="створка" style="width:65px" title="Доплата за створку">
+    </div>
+  `).join('');
+}
+
+function showCompetitorComparison(d, myPrice) {
+  const block = document.getElementById('competitorBlock');
+  const container = document.getElementById('competitorPrices');
+  if (!myPrice) { block.style.display = 'none'; return; }
+
+  block.style.display = '';
+  const competitors = getCompetitorData();
+  const area = d.width * d.height / 1e6;
+
+  // Считаем количество створок и импостов
+  let sashCount = 0;
+  const secs = d.sections || [];
+  secs.forEach(s => { if (s.sash) sashCount++; });
+  let mullionCount = 0;
+  (function countM(n) { if (n.type === 'split') { mullionCount++; n.children.forEach(countM); } })(d.root);
+
+  // Наценка пользователя
+  const mT = document.getElementById('markupType').value;
+  const mV = parseFloat(document.getElementById('markupValue').value) || 0;
+  const markup = mV > 0 ? (mT === 'percent' ? Math.round(myPrice * mV / 100) : mV) : 0;
+  const myClientPrice = myPrice + markup;
+
+  // Мои цены из данных
+  const localData={};
+  document.querySelectorAll('.cp').forEach(inp=>{const v=parseFloat(inp.value);if(!isNaN(v)&&v!==0)localData[inp.dataset.key]=v;});
+  const myBasePm2 = localData['base_Brusbox 60_4м1-16-4м1'] || 0;
+  const mySash = localData['sash_tiltturn'] || 0;
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<thead><tr style="background:#fff3e0;font-weight:600;text-align:left">';
+  html += '<th style="padding:4px 6px;border-bottom:2px solid #ffcc02">Конкурент</th>';
+  html += '<th style="padding:4px 6px;border-bottom:2px solid #ffcc02;text-align:right">Цена/<br>м²</th>';
+  html += '<th style="padding:4px 6px;border-bottom:2px solid #ffcc02;text-align:right">Створка</th>';
+  html += '<th style="padding:4px 6px;border-bottom:2px solid #ffcc02;text-align:right">Мои<br>цены</th>';
+  html += '</tr></thead><tbody>';
+
+  // Моя строка
+  html += '<tr style="font-weight:700;background:#e8f4fd">';
+  html += '<td style="padding:4px 6px;color:#1a5cb8">Ты (Brusbox 60)</td>';
+  html += `<td style="padding:4px 6px;text-align:right;color:#1a5cb8">${myBasePm2.toLocaleString()} ₽</td>`;
+  html += `<td style="padding:4px 6px;text-align:right;color:#1a5cb8">${mySash.toLocaleString()} ₽</td>`;
+  html += `<td style="padding:4px 6px;text-align:right;color:#1a5cb8;font-size:12px">${myClientPrice.toLocaleString()} ₽</td>`;
+  html += '</tr>';
+
+  competitors.forEach(c => {
+    const compPrice = Math.round(c.pricePerM2 * area + sashCount * (c.sashExtra || 0) + mullionCount * (c.mullionExtra || 0));
+    const diff = compPrice - myClientPrice;
+    const diffPct = Math.round(diff / myClientPrice * 100);
+    const sign = diff > 0 ? '+' : '';
+    const clr = diff > 0 ? '#dc3545' : '#2a9d2a';
+
+    html += '<tr style="border-bottom:1px solid #ffe0b2">';
+    html += `<td style="padding:4px 6px;color:#555">${c.name}</td>`;
+    html += `<td style="padding:4px 6px;text-align:right;font-weight:700">${c.pricePerM2.toLocaleString()} ₽</td>`;
+    html += `<td style="padding:4px 6px;text-align:right">${(c.sashExtra||0).toLocaleString()} ₽</td>`;
+    html += `<td style="padding:4px 6px;text-align:right;color:${clr};font-size:10px">${compPrice.toLocaleString()} ₽<br>${sign}${diffPct}%</td>`;
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+
+  // Дата обновления
+  const savedDate = localStorage.getItem('okna_competitors_date');
+  if (savedDate) {
+    html += `<div style="font-size:10px;color:#aaa;margin-top:4px">Обновлено: ${savedDate}</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function runCompetitorParse() {
+  alert('Запусти в терминале:\\nnode parse-competitors.mjs\\n\\nПосле завершения нажми "Загрузить JSON" ниже.');
+  // Добавляем кнопку загрузки файла если ещё нет
+  if (!document.getElementById('compFileInput')) {
+    const div = document.getElementById('competitorEdit');
+    const fileHtml = '<div style="margin-top:6px"><input type="file" id="compFileInput" accept=".json" onchange="loadCompetitorFile(this)" style="font-size:11px"></div>';
+    div.insertAdjacentHTML('beforeend', fileHtml);
+  }
+}
+
+function loadCompetitorFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.competitors) throw new Error('Нет данных конкурентов');
+
+      const competitors = getCompetitorData();
+      let updated = 0;
+
+      // Обновляем цены из О-КНО (profiles с pricePerM2)
+      const okno = data.competitors.find(c => c.name === 'О-КНО');
+      if (okno && okno.profiles && okno.profiles.length > 0) {
+        const profileMap = {};
+        okno.profiles.forEach(p => {
+          const key = p.profile.toLowerCase();
+          profileMap[key] = p.pricePerM2;
+        });
+        competitors.forEach(c => {
+          if (!c.id.startsWith('okno_')) return;
+          // Ищем совпадение по имени
+          for (const [key, price] of Object.entries(profileMap)) {
+            if (c.name.toLowerCase().includes(key.split(' ')[0].toLowerCase()) &&
+                c.name.toLowerCase().includes(key.split(' ').pop().toLowerCase())) {
+              c.pricePerM2 = price;
+              updated++;
+              break;
+            }
+          }
+        });
+      }
+
+      if (data.date) localStorage.setItem('okna_competitors_date', data.date);
+      localStorage.setItem('okna_competitors', JSON.stringify(competitors));
+      alert('Обновлено ' + updated + ' цен (' + (data.date || 'без даты') + ')');
+      const est = estimatePrice(designer1);
+      if (est) showCompetitorComparison(designer1, est);
+      buildCompetitorInputs();
+    } catch (err) {
+      alert('Ошибка загрузки: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function showOrderForm(){
+  const total=document.getElementById('clientTotal').textContent;
+  const html='<div style="position:fixed;inset:0;background:#00000060;z-index:9999;display:flex;align-items:center;justify-content:center" id="orderModal" onclick="if(event.target===this)this.remove()"><div style="background:#fff;border-radius:16px;padding:32px;max-width:400px;width:90%;box-shadow:0 20px 60px #00000030"><h3 style="margin:0 0 8px;font-size:20px">Оставить заявку</h3><p style="color:#666;font-size:14px;margin:0 0 20px">Ориентировочная стоимость: <b>'+total+'</b></p><input type="text" id="orderName" placeholder="Ваше имя" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box"><input type="tel" id="orderPhone" placeholder="Телефон" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:16px;box-sizing:border-box"><button onclick="submitOrder()" style="width:100%;padding:12px;background:#E8521A;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer">Отправить</button></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+  document.getElementById('orderPhone').focus();
+}
+function submitOrder(){
+  const name=document.getElementById('orderName').value.trim();
+  const phone=document.getElementById('orderPhone').value.trim();
+  if(!phone){document.getElementById('orderPhone').style.borderColor='#e53935';return;}
+  const total=document.getElementById('clientTotal').textContent;
+  const btn=document.querySelector('#orderModal button');
+  btn.textContent='Отправка...';btn.disabled=true;
+  // Отправка через существующий webhook
+  const url='https://script.google.com/macros/s/AKfycbxfZfdjrNPdFSV36GtvB_cs3UBjfLy7iid0BjaBF2MHZIjMGdMKOpOWQhasUnI8hDlD2Q/exec';
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:'order',name:name,phone:phone,total:total,type:selectedType,timestamp:new Date().toISOString()})}).then(()=>{
+    document.getElementById('orderModal').innerHTML='<div style="background:#fff;border-radius:16px;padding:40px;text-align:center;max-width:400px;width:90%"><div style="font-size:48px;margin-bottom:12px">✓</div><h3 style="margin:0 0 8px">Заявка отправлена!</h3><p style="color:#666;font-size:14px;margin:0">Мы перезвоним в ближайшее время</p></div>';
+    setTimeout(()=>{const m=document.getElementById('orderModal');if(m)m.remove();},3000);
+  }).catch(()=>{btn.textContent='Ошибка, попробуйте позвонить';btn.style.background='#999';});
+}
+function loadSettings(){const s=JSON.parse(localStorage.getItem('okna_settings')||'{}');if(s.markupType)document.getElementById('markupType').value=s.markupType;if(s.markupValue!==undefined)document.getElementById('markupValue').value=s.markupValue;}
+
+// ========== RESET ==========
+function resetDesigner(n){
+  if(n===1){
+    designer1.reset();
+    document.getElementById('glazing1').value='4м1-16-4м1';
+    document.getElementById('lamInner1').value='#f0f0ec';
+    document.getElementById('lamOuter1').value='#f0f0ec';
+  }
+}
+
+// ========== POPULATE SELECTS ==========
+function populateSelects(){
+  // Lamination
+  document.querySelectorAll('[id^="lamInner"],[id^="lamOuter"]').forEach(sel=>{
+    sel.innerHTML=LAMS.map(l=>`<option value="${l.color}">${l.name}</option>`).join('');
+  });
+  // Handle colors in sash dialog
+  const hsel=document.getElementById('sashHandleColor');
+  hsel.innerHTML=HANDLE_COLORS.map(h=>`<option value="${h.id}">${h.name}</option>`).join('');
+}
+
+// ========== INIT ==========
+let designer1;
+window.addEventListener('DOMContentLoaded',()=>{
+  populateSelects();
+  designer1=new WindowDesigner('canvas1','dimInput1','configInfo1');
+
+  // Profile & glazing
+  document.getElementById('profile1').addEventListener('change',e=>{designer1.profile=e.target.value;designer1.updateConfigInfo();});
+  document.getElementById('glazing1').addEventListener('change',e=>{designer1.glazingFormula=e.target.value;designer1.render();});
+
+  // Lamination (if elements exist)
+  const li1=document.getElementById('lamInner1'),lo1=document.getElementById('lamOuter1');
+  if(li1)li1.addEventListener('change',e=>{designer1.lamInner=e.target.value;designer1.render();});
+  if(lo1)lo1.addEventListener('change',e=>{designer1.lamOuter=e.target.value;designer1.render();});
+
+  buildBasePriceTable();
+  buildTypeCards();
+  drawPreview();
+  loadSettings(); loadComponentPrices();
+  loadSheetPrices();
+  loadSheetCompetitors();
+  // Auto-save component prices on any input change
+  document.addEventListener('input',e=>{if(e.target.classList.contains('cp'))saveComponentPrices();});
+  // Перерисовка при смене цвета жалюзи/штор
+  document.addEventListener('change',e=>{
+    if(e.target.name==='blindColor'||e.target.name==='rollColor') drawPreview();
+  });
+});
+</script>
+</body>
+</html>

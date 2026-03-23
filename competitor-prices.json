@@ -1,0 +1,211 @@
+{
+  "date": "2026-03-19",
+  "timestamp": 1773939037092,
+  "competitors": [
+    {
+      "name": "Калева",
+      "url": "maloyaroslavec.okna.ru",
+      "configs": {},
+      "allPrices": [
+        5800,
+        6300,
+        7900,
+        9300,
+        9500,
+        9800,
+        10000,
+        13000,
+        13900,
+        14000,
+        15100,
+        15400,
+        16500,
+        17755,
+        18700,
+        18900,
+        19000,
+        20000,
+        21600,
+        21700,
+        22200,
+        22300,
+        22500,
+        25700,
+        25800,
+        26700,
+        34900,
+        36700,
+        40900,
+        41600,
+        42500,
+        47700,
+        48200,
+        56800
+      ],
+      "note": "Калева Стандарт/Премиум. Стартовые: Стандарт от 13000, Дизайн от 18700"
+    },
+    {
+      "name": "О-КНО",
+      "url": "maloyaroslavec.o-kno.ru",
+      "profiles": [
+        {
+          "profile": "REHAU Geneo",
+          "pricePerM2": 14970
+        },
+        {
+          "profile": "REHAU Brilliant",
+          "pricePerM2": 6560
+        },
+        {
+          "profile": "REHAU Intelio 80",
+          "pricePerM2": 7120
+        },
+        {
+          "profile": "REHAU Delight",
+          "pricePerM2": 4890
+        },
+        {
+          "profile": "MELKE Art 85",
+          "pricePerM2": 8675
+        },
+        {
+          "profile": "MELKE Evolution 70",
+          "pricePerM2": 3824
+        },
+        {
+          "profile": "MELKE Smart 60",
+          "pricePerM2": 2364
+        },
+        {
+          "profile": "Veka Softline",
+          "pricePerM2": 4000
+        },
+        {
+          "profile": "Veka Softline 82 мм",
+          "pricePerM2": 4000
+        },
+        {
+          "profile": "Veka Proline",
+          "pricePerM2": 4000
+        },
+        {
+          "profile": "Veka Evolution",
+          "pricePerM2": 4266
+        },
+        {
+          "profile": "KBE 88 мм",
+          "pricePerM2": 8151
+        },
+        {
+          "profile": "KBE 76 мм",
+          "pricePerM2": 6373
+        },
+        {
+          "profile": "KBE Master 70 мм",
+          "pricePerM2": 5202
+        },
+        {
+          "profile": "KBE_Expert 70 мм",
+          "pricePerM2": 5593
+        }
+      ],
+      "configs": {
+        "600×1400_REHAU Geneo": 12575,
+        "600×1400_REHAU Brilliant": 5510,
+        "600×1400_REHAU Intelio 80": 5981,
+        "600×1400_REHAU Delight": 4108,
+        "600×1400_MELKE Art 85": 7287,
+        "600×1400_MELKE Evolution 70": 3212,
+        "600×1400_MELKE Smart 60": 1986,
+        "600×1400_Veka Softline": 3360,
+        "600×1400_Veka Softline 82 мм": 3360,
+        "600×1400_Veka Proline": 3360,
+        "600×1400_Veka Evolution": 3583,
+        "600×1400_KBE 88 мм": 6847,
+        "600×1400_KBE 76 мм": 5353,
+        "600×1400_KBE Master 70 мм": 4370,
+        "600×1400_KBE_Expert 70 мм": 4698,
+        "1000×1000_REHAU Geneo": 14970,
+        "1000×1000_REHAU Brilliant": 6560,
+        "1000×1000_REHAU Intelio 80": 7120,
+        "1000×1000_REHAU Delight": 4890,
+        "1000×1000_MELKE Art 85": 8675,
+        "1000×1000_MELKE Evolution 70": 3824,
+        "1000×1000_MELKE Smart 60": 2364,
+        "1000×1000_Veka Softline": 4000,
+        "1000×1000_Veka Softline 82 мм": 4000,
+        "1000×1000_Veka Proline": 4000,
+        "1000×1000_Veka Evolution": 4266,
+        "1000×1000_KBE 88 мм": 8151,
+        "1000×1000_KBE 76 мм": 6373,
+        "1000×1000_KBE Master 70 мм": 5202,
+        "1000×1000_KBE_Expert 70 мм": 5593,
+        "1300×1400_REHAU Geneo": 27245,
+        "1300×1400_REHAU Brilliant": 11939,
+        "1300×1400_REHAU Intelio 80": 12958,
+        "1300×1400_REHAU Delight": 8900,
+        "1300×1400_MELKE Art 85": 15789,
+        "1300×1400_MELKE Evolution 70": 6960,
+        "1300×1400_MELKE Smart 60": 4302,
+        "1300×1400_Veka Softline": 7280,
+        "1300×1400_Veka Softline 82 мм": 7280,
+        "1300×1400_Veka Proline": 7280,
+        "1300×1400_Veka Evolution": 7764,
+        "1300×1400_KBE 88 мм": 14835,
+        "1300×1400_KBE 76 мм": 11599,
+        "1300×1400_KBE Master 70 мм": 9468,
+        "1300×1400_KBE_Expert 70 мм": 10179,
+        "2100×1400_REHAU Geneo": 44012,
+        "2100×1400_REHAU Brilliant": 19286,
+        "2100×1400_REHAU Intelio 80": 20933,
+        "2100×1400_REHAU Delight": 14377,
+        "2100×1400_MELKE Art 85": 25505,
+        "2100×1400_MELKE Evolution 70": 11243,
+        "2100×1400_MELKE Smart 60": 6950,
+        "2100×1400_Veka Softline": 11760,
+        "2100×1400_Veka Softline 82 мм": 11760,
+        "2100×1400_Veka Proline": 11760,
+        "2100×1400_Veka Evolution": 12542,
+        "2100×1400_KBE 88 мм": 23964,
+        "2100×1400_KBE 76 мм": 18737,
+        "2100×1400_KBE Master 70 мм": 15294,
+        "2100×1400_KBE_Expert 70 мм": 16443
+      },
+      "note": "Цены за м² × площадь (без створок/импостов/монтажа)"
+    },
+    {
+      "name": "Сателс",
+      "url": "maloyaroslavets.satels-okna.ru",
+      "profile": "Veka Softline",
+      "defaultPrices": [],
+      "configs": {
+        "600×1400": null,
+        "1000×1000": null,
+        "1300×1400": null,
+        "2100×1400": null
+      },
+      "note": "Veka Softline, ~95% точность калькулятора"
+    },
+    {
+      "name": "Окна Свет",
+      "url": "40-okna.ru",
+      "address": "Калужская 36, Малоярославец",
+      "profiles": [
+        "VEKA",
+        "SATELS",
+        "Rehau"
+      ],
+      "allPrices": [
+        3000,
+        15000
+      ],
+      "calcPrices": [],
+      "profileDetails": [
+        "Veka.",
+        "Veka Softline 82 с фурнитурой Roto NT!",
+        "Veka Softline 82 и получите полезный подарок – набор средств по"
+      ],
+      "note": "Калужская 36. VEKA/SATELS/Rehau. от 3000 руб/м²"
+    }
+  ]
+}
