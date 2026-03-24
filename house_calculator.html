@@ -180,6 +180,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </label>
       <div class="color-row" id="nalichnikiColors" style="display:none;margin-top:8px"></div>
     </div>
+
+    <!-- Отправка заявки -->
+    <div class="section" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-top:2px solid var(--accent)">
+      <div class="section-title" style="color:var(--accent2)">Отправить на просчёт</div>
+      <div style="margin-bottom:10px">
+        <input type="text" id="clientName" placeholder="Ваше имя" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;margin-bottom:6px">
+        <input type="tel" id="clientPhone" placeholder="Телефон" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px">
+      </div>
+      <button id="btnSubmitOrder" style="width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),#2d7de0);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s">
+        Отправить менеджеру
+      </button>
+      <div id="submitStatus" style="margin-top:8px;font-size:12px;text-align:center;display:none"></div>
+    </div>
   </div>
 
   <!-- ===== 3D VIEWPORT ===== -->
@@ -331,9 +344,9 @@ loadTex('logs10', 'logs-10.jpg');
 const orbit = {drag:false, theta:Math.PI/4, phi:Math.PI/5, dist:14, tx:0, ty:0, lx:0, ly:0};
 // Размер тайла текстуры для каждого материала (в world units)
 const TEX_TILES = {
-  siding: 2000 * SCALE,  // 2м
+  siding: 1200 * SCALE,  // 1.2м — мельче для реалистичного сайдинга
   brick:  1000 * SCALE,  // 1м — мелкий кирпич
-  timber: 2000 * SCALE,  // 2м
+  timber: 1500 * SCALE,  // 1.5м
   roof:   1500 * SCALE   // 1.5м
 };
 
@@ -478,24 +491,8 @@ function buildHouse(){
       openings.push({x:cp.xLocal, y:cp.yLocal, w:cp.cw, h:cp.ch});
     });
 
-    if(openings.length===0){
-      // Solid wall — BoxGeometry UV: 0→1
-      if(m.map){
-        m.map = m.map.clone();
-        m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping;
-        const tt = TEX_TILES[S.wallMat] || TEX_TILES.siding;
-        m.map.repeat.set(wl.scaleX / tt, totalH / tt);
-        m.map.needsUpdate = true;
-      }
-      const g = new THREE.BoxGeometry(wl.scaleX, totalH, 0.15);
-      const mesh = new THREE.Mesh(g, m);
-      mesh.position.set(...wl.pos);
-      mesh.rotation.set(...wl.rot);
-      mesh.castShadow=true; mesh.receiveShadow=true;
-      mesh.userData={side:wl.side,clickable:true};
-      scene.add(mesh); allMeshes.push(mesh); wallClickMeshes.push(mesh);
-    } else {
-      // Wall with openings — use Shape with holes
+    // Всегда ExtrudeGeometry — единый UV для всех стен
+    {
       const wallW = wl.scaleX;
       const shape = new THREE.Shape();
       shape.moveTo(-wallW/2, 0);
@@ -504,11 +501,10 @@ function buildHouse(){
       shape.lineTo(-wallW/2, totalH);
       shape.lineTo(-wallW/2, 0);
 
-      // Проём больше окна: +20мм лево/право, +20мм верх, +30мм низ
+      // Проёмы (если есть)
       const PAD_L=20*SCALE, PAD_R=20*SCALE, PAD_T=20*SCALE, PAD_B=30*SCALE;
       openings.forEach(o=>{
         const hole = new THREE.Path();
-        // CW winding для дырок (Three.js ожидает CW для holes)
         const l = o.x - o.w/2 - PAD_L, r = o.x + o.w/2 + PAD_R;
         const b = o.y - o.h/2 - PAD_B, t = o.y + o.h/2 + PAD_T;
         hole.moveTo(l, b);
@@ -531,14 +527,14 @@ function buildHouse(){
       const g = new THREE.ExtrudeGeometry(shape, extrudeSettings);
       g.translate(0, 0, -0.075);
       const mesh = new THREE.Mesh(g, m);
-      // Position: center of wall, but y=0 since shape starts at 0
       const basePos = [...wl.pos];
-      basePos[1] = 0; // shape starts from y=0
+      basePos[1] = 0;
       mesh.position.set(...basePos);
       mesh.rotation.set(...wl.rot);
       mesh.castShadow=true; mesh.receiveShadow=true;
       mesh.userData={side:wl.side,clickable:true};
       scene.add(mesh); allMeshes.push(mesh); wallClickMeshes.push(mesh);
+
     }
   });
 
@@ -662,50 +658,6 @@ function buildConstructions3D(hw, hd, totalH){
       // right
       group.add(makeBox(FRAME_W, ch-FRAME_W*2, FRAME_D, cw/2-FRAME_W/2, 0, 0, fm));
 
-      // === НАЛИЧНИКИ (жёлтый на чертеже) ===
-      // Окно утоплено на RECESS от наружной стены.
-      // Наружная поверхность стены в local z = RECESS (0.1) от центра group.
-      const NW = 0.15;   // 150мм ширина планки
-      const RECESS_LOCAL = 0.1; // расстояние от центра group до наружной стены
-      const NOUT = 0.025; // выступ наличника наружу за стену
-      const ND = RECESS_LOCAL - FRAME_D/2 + NOUT; // глубина: от рамы до стены + выступ
-      const nz = FRAME_D/2 + ND/2; // центр: начинается от рамы
-
-      if(S.nalichniki){
-        const nMat = new THREE.MeshStandardMaterial({color:S.nalichnikiColor, roughness:0.5, metalness:0.02});
-        // верхний
-        group.add(makeBox(cw + NW*2, NW, ND, 0, ch/2 + NW/2, nz, nMat));
-        // нижний
-        group.add(makeBox(cw + NW*2, NW, ND, 0, -ch/2 - NW/2, nz, nMat));
-        // левый (высота = только окно)
-        group.add(makeBox(NW, ch, ND, -cw/2 - NW/2, 0, nz, nMat));
-        // правый
-        group.add(makeBox(NW, ch, ND, cw/2 + NW/2, 0, nz, nMat));
-      }
-
-      // === ОТЛИВ (зелёный на чертеже) ===
-      // На уровне нижней рамы, выступает наружу дальше наличников.
-      // Ширина = окно (между боковыми наличниками).
-      if(S.otliv){
-        const oMat = new THREE.MeshStandardMaterial({color:S.nalichnikiColor, roughness:0.3, metalness:0.4});
-        const oW = cw;         // ширина = окно
-        const oOUT = 0.12;    // выступ отлива наружу за стену
-        const oD = RECESS_LOCAL - FRAME_D/2 + oOUT; // от рамы до стены + выступ
-        const oH = 0.004;      // толщина металла
-        const oGeo = new THREE.BoxGeometry(oW, oH, oD);
-        const oMesh = new THREE.Mesh(oGeo, oMat);
-        // Y = низ рамы, Z = центрировано от рамы наружу
-        oMesh.position.set(0, -ch/2, FRAME_D/2 + oD/2);
-        oMesh.rotation.x = 0.1; // лёгкий наклон
-        oMesh.castShadow = true;
-        group.add(oMesh);
-      }
-
-      // Подоконник (если нет ни отлива ни наличников)
-      if(!S.otliv && !S.nalichniki){
-        group.add(makeBox(cw+0.04, 0.01, 0.08, 0, -ch/2-0.005, 0.04, sillMat));
-      }
-
       // === Створки ===
       let parts = 1;
       if(c.w>800 && c.w<=1600) parts=2;
@@ -801,6 +753,44 @@ function buildConstructions3D(hw, hd, totalH){
       group.add(makeBox(cw+0.02, 0.015, 0.06, 0, -ch/2+0.005, 0.03, sillMat));
     }
 
+    // === НАЛИЧНИКИ + ОТЛИВ (общие для окон и дверей) ===
+    const NW = 0.15;   // 150мм ширина планки
+    const RECESS_LOCAL = 0.1;
+    const NOUT = 0.025;
+    const ND = RECESS_LOCAL - FRAME_D/2 + NOUT;
+    const nz = FRAME_D/2 + ND/2;
+
+    if(S.nalichniki){
+      const nMat = new THREE.MeshStandardMaterial({color:S.nalichnikiColor, roughness:0.5, metalness:0.02});
+      // верхний
+      group.add(makeBox(cw + NW*2, NW, ND, 0, ch/2 + NW/2, nz, nMat));
+      // нижний (для дверей не нужен — там порог)
+      if(c.type==='window') group.add(makeBox(cw + NW*2, NW, ND, 0, -ch/2 - NW/2, nz, nMat));
+      // левый
+      group.add(makeBox(NW, ch, ND, -cw/2 - NW/2, 0, nz, nMat));
+      // правый
+      group.add(makeBox(NW, ch, ND, cw/2 + NW/2, 0, nz, nMat));
+    }
+
+    if(S.otliv && c.type==='window'){
+      const oMat = new THREE.MeshStandardMaterial({color:S.nalichnikiColor, roughness:0.3, metalness:0.4});
+      const oW = cw;
+      const oOUT = 0.12;
+      const oD = RECESS_LOCAL - FRAME_D/2 + oOUT;
+      const oH = 0.004;
+      const oGeo = new THREE.BoxGeometry(oW, oH, oD);
+      const oMesh = new THREE.Mesh(oGeo, oMat);
+      oMesh.position.set(0, -ch/2, FRAME_D/2 + oD/2);
+      oMesh.rotation.x = 0.1;
+      oMesh.castShadow = true;
+      group.add(oMesh);
+    }
+
+    // Подоконник (окна без отлива и наличников)
+    if(c.type==='window' && !S.otliv && !S.nalichniki){
+      group.add(makeBox(cw+0.04, 0.01, 0.08, 0, -ch/2-0.005, 0.04, sillMat));
+    }
+
     // Позиция из единого расчёта — совпадает с проёмами
     group.position.set(p.wx, p.wy, p.wz);
     group.rotation.y = p.wry;
@@ -847,6 +837,26 @@ function buildRoof(hw, hd, totalH){
     mesh.position.set(0, totalH, -hd-0.15);
     mesh.castShadow = true;
     scene.add(mesh); allMeshes.push(mesh);
+
+    // === КОНЁК (уголок на верхнем ребре) ===
+    const RW = 0.20; // 200мм — ширина полки конька
+    const RT = 0.005; // 5мм — толщина металла
+    const ridgeMat = new THREE.MeshStandardMaterial({color:S.roofColor, roughness:0.3, metalness:0.5});
+    const ridgeLen = hd*2 + 0.3; // длина конька = длина крыши
+    // Угол ската: atan2(roofH, hw+0.15)
+    const slopeAngle = Math.atan2(roofH, hw+0.15);
+    // Левая полка конька — ложится на левый скат
+    const leftPlank = new THREE.Mesh(new THREE.BoxGeometry(RW, RT, ridgeLen), ridgeMat);
+    leftPlank.position.set(-RW/2 * Math.cos(slopeAngle), totalH + roofH - RW/2 * Math.sin(slopeAngle), 0);
+    leftPlank.rotation.z = slopeAngle;
+    leftPlank.castShadow = true;
+    scene.add(leftPlank); allMeshes.push(leftPlank);
+    // Правая полка конька — ложится на правый скат
+    const rightPlank = new THREE.Mesh(new THREE.BoxGeometry(RW, RT, ridgeLen), ridgeMat);
+    rightPlank.position.set(RW/2 * Math.cos(slopeAngle), totalH + roofH - RW/2 * Math.sin(slopeAngle), 0);
+    rightPlank.rotation.z = -slopeAngle;
+    rightPlank.castShadow = true;
+    scene.add(rightPlank); allMeshes.push(rightPlank);
 
     // Gables (фронтоны) — текстура стен
     const gableTex = (TEX[S.wallTexKey] && TEX[S.wallTexKey].image) ? TEX[S.wallTexKey].clone() : null;
@@ -918,6 +928,83 @@ function buildRoof(hw, hd, totalH){
     mesh.position.set(0, totalH, 0);
     mesh.castShadow = true;
     scene.add(mesh); allMeshes.push(mesh);
+
+    // === КОНЬКИ четырёхскатной крыши ===
+    const RW = 0.20, RT = 0.005;
+    const ridgeMat = new THREE.MeshStandardMaterial({color:S.roofColor, roughness:0.3, metalness:0.5});
+
+    // Верхний конёк (ridge)
+    if(ridgeHalf > 0.01){
+      const ridgeLen = ridgeHalf * 2;
+      if(!isWide){
+        // Конёк вдоль Z
+        const slopeA = Math.atan2(roofH, ew);
+        const lp = new THREE.Mesh(new THREE.BoxGeometry(RW, RT, ridgeLen), ridgeMat);
+        lp.position.set(-RW/2*Math.cos(slopeA), totalH + roofH - RW/2*Math.sin(slopeA), 0);
+        lp.rotation.z = slopeA;
+        lp.castShadow = true;
+        scene.add(lp); allMeshes.push(lp);
+        const rp = new THREE.Mesh(new THREE.BoxGeometry(RW, RT, ridgeLen), ridgeMat);
+        rp.position.set(RW/2*Math.cos(slopeA), totalH + roofH - RW/2*Math.sin(slopeA), 0);
+        rp.rotation.z = -slopeA;
+        rp.castShadow = true;
+        scene.add(rp); allMeshes.push(rp);
+      } else {
+        // Конёк вдоль X
+        const slopeA = Math.atan2(roofH, ed);
+        const fp = new THREE.Mesh(new THREE.BoxGeometry(ridgeLen, RT, RW), ridgeMat);
+        fp.position.set(0, totalH + roofH - RW/2*Math.sin(slopeA), -RW/2*Math.cos(slopeA));
+        fp.rotation.x = -slopeA;
+        fp.castShadow = true;
+        scene.add(fp); allMeshes.push(fp);
+        const bp = new THREE.Mesh(new THREE.BoxGeometry(ridgeLen, RT, RW), ridgeMat);
+        bp.position.set(0, totalH + roofH - RW/2*Math.sin(slopeA), RW/2*Math.cos(slopeA));
+        bp.rotation.x = slopeA;
+        bp.castShadow = true;
+        scene.add(bp); allMeshes.push(bp);
+      }
+    }
+
+    // === Хребты (hip ridges) — 4 диагональных ребра от углов к концам конька ===
+    const corners = [[-ew,0,-ed],[ew,0,-ed],[ew,0,ed],[-ew,0,ed]];
+    let ridgeEnds;
+    if(!isWide){
+      ridgeEnds = [[0,roofH,-ridgeHalf],[0,roofH,ridgeHalf]];
+      // corner -> ridge end: FL->R1, FR->R1, BR->R2, BL->R2
+      [[0,0],[1,0],[2,1],[3,1]].forEach(([ci,ri])=>{
+        const c = corners[ci], r = ridgeEnds[ri];
+        const dx=r[0]-c[0], dy=r[1]-c[1], dz=r[2]-c[2];
+        const len = Math.sqrt(dx*dx+dy*dy+dz*dz);
+        const hGeo = new THREE.BoxGeometry(RW, RT, len);
+        const hMesh = new THREE.Mesh(hGeo, ridgeMat);
+        // Центр хребта
+        hMesh.position.set((c[0]+r[0])/2, totalH+(c[1]+r[1])/2, (c[2]+r[2])/2);
+        // Поворот: сначала Y (горизонтальное направление), потом X (наклон вверх)
+        const horizDist = Math.sqrt(dx*dx+dz*dz);
+        hMesh.rotation.order = 'YXZ';
+        hMesh.rotation.y = Math.atan2(dx, dz);
+        hMesh.rotation.x = -Math.atan2(dy, horizDist);
+        hMesh.castShadow = true;
+        scene.add(hMesh); allMeshes.push(hMesh);
+      });
+    } else {
+      ridgeEnds = [[-ridgeHalf,roofH,0],[ridgeHalf,roofH,0]];
+      // FL->R1, FR->R2, BR->R2, BL->R1
+      [[0,0],[1,1],[2,1],[3,0]].forEach(([ci,ri])=>{
+        const c = corners[ci], r = ridgeEnds[ri];
+        const dx=r[0]-c[0], dy=r[1]-c[1], dz=r[2]-c[2];
+        const len = Math.sqrt(dx*dx+dy*dy+dz*dz);
+        const hGeo = new THREE.BoxGeometry(RW, RT, len);
+        const hMesh = new THREE.Mesh(hGeo, ridgeMat);
+        hMesh.position.set((c[0]+r[0])/2, totalH+(c[1]+r[1])/2, (c[2]+r[2])/2);
+        const horizDist = Math.sqrt(dx*dx+dz*dz);
+        hMesh.rotation.order = 'YXZ';
+        hMesh.rotation.y = Math.atan2(dx, dz);
+        hMesh.rotation.x = -Math.atan2(dy, horizDist);
+        hMesh.castShadow = true;
+        scene.add(hMesh); allMeshes.push(hMesh);
+      });
+    }
 
   } else {
     // Flat
@@ -1403,9 +1490,354 @@ function renderSwatches(id, items, active, onChange){
 function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v))}
 
 // ============================================================
+// ЗАЯВКА / ОТЧЁТ — отправка email менеджеру
+// ============================================================
+const SESSION_START = Date.now();
+let userCity = '';
+let orderSubmitted = false;
+
+// Геолокация города по IP
+fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>{
+  userCity = d.city || d.region || 'Неизвестно';
+}).catch(()=>{ userCity = 'Не определён'; });
+
+function getTimeSpent(){
+  const sec = Math.round((Date.now() - SESSION_START) / 1000);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m > 0 ? `${m} мин ${s} сек` : `${s} сек`;
+}
+
+function getWallMatName(){
+  const names = {siding:'Сайдинг', brick:'Кирпич', timber:'Брус'};
+  return names[S.wallMat] || S.wallMat;
+}
+
+function getProfileName(){
+  const prof = PROFILES.find(p=>p.id===S.profiles[0]);
+  return prof ? prof.name : S.profiles[0] || '—';
+}
+
+function collectOrderData(){
+  const items = Object.entries(S.constructions);
+  let windowList = [];
+  let totalArea = 0;
+  let totalPrice = 0;
+
+  // Цена за м²
+  let pricePerM2 = Infinity;
+  let bestProfile = '';
+  S.profiles.forEach(p=>{
+    S.thicknesses.forEach(t=>{
+      const k = `${p}_${t}`;
+      if(PRICES[k] && PRICES[k] < pricePerM2){
+        pricePerM2 = PRICES[k];
+        bestProfile = `${p.charAt(0).toUpperCase()+p.slice(1)} ${t}мм`;
+      }
+    });
+  });
+  if(pricePerM2 === Infinity) pricePerM2 = 5099;
+
+  const sideNames = {A:'Фасад (A)', B:'Правая (B)', C:'Задняя (C)', D:'Левая (D)'};
+
+  items.forEach(([key, c])=>{
+    const [side, fl, pos] = key.split('_');
+    const area = (c.w / 1000) * (c.h / 1000);
+    totalArea += area;
+    const price = Math.round(area * pricePerM2);
+    totalPrice += price;
+
+    const sashDesc = c.sashCount !== undefined ? `${c.sashCount} створок` : '';
+
+    windowList.push({
+      side: sideNames[side] || side,
+      floor: +fl,
+      position: +pos + 1,
+      type: c.type === 'window' ? 'Окно' : 'Дверь',
+      width: c.w,
+      height: c.h,
+      area: area.toFixed(2),
+      sash: sashDesc,
+      price: price
+    });
+  });
+
+  // Наличники / отливы
+  const extras = [];
+  if(S.nalichniki) extras.push('Наличники (' + (S.nalichnikiColor === '#ffffff' ? 'белые' : S.nalichnikiColor === '#5a3a1e' ? 'коричневые' : 'серые') + ')');
+  if(S.otliv) extras.push('Отлив');
+
+  // Ламинация
+  const lamOuter = S.frameOuter !== '#f0f0ec' ? FRAME_COLORS.find(c=>c.color===S.frameOuter)?.name || S.frameOuter : '';
+  const lamInner = S.frameInner !== '#f0f0ec' ? FRAME_COLORS.find(c=>c.color===S.frameInner)?.name || S.frameInner : '';
+
+  return {
+    windows: windowList,
+    totalArea: totalArea.toFixed(2),
+    totalPrice: totalPrice,
+    profile: bestProfile,
+    pricePerM2: pricePerM2,
+    filling: S.filling === 'single' ? '1-камерный' : S.filling === 'double' ? '2-камерный' : 'Энергосберегающий',
+    house: {
+      sideAC: S.sideAC,
+      sideBD: S.sideBD,
+      floors: S.floors,
+      roofType: S.roofType === 'gable' ? 'Двускатная' : S.roofType === 'hip' ? 'Четырёхскатная' : 'Плоская',
+      wallMat: getWallMatName(),
+      wallColor: WALL_SETS[S.wallMat]?.find(w=>w.tex===S.wallTexKey)?.name || ''
+    },
+    extras: extras,
+    lamOuter: lamOuter,
+    lamInner: lamInner
+  };
+}
+
+function buildEmailHTML(data, clientName, clientPhone, isAutoReport){
+  let html = '<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto">';
+
+  if(isAutoReport){
+    html += '<div style="background:#fff3cd;padding:12px 16px;border-radius:8px;margin-bottom:16px;border:1px solid #ffc107">';
+    html += '<b>Автоотчёт</b> — пользователь считал, но не отправил заявку';
+    html += '</div>';
+  }
+
+  // Контакт
+  if(clientName || clientPhone){
+    html += '<div style="background:#e8f5e9;padding:12px 16px;border-radius:8px;margin-bottom:16px">';
+    if(clientName) html += '<div><b>Имя:</b> ' + clientName + '</div>';
+    if(clientPhone) html += '<div><b>Телефон:</b> ' + clientPhone + '</div>';
+    html += '</div>';
+  }
+
+  // Метаданные
+  html += '<div style="background:#f5f5f5;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13px">';
+  html += '<div><b>Город:</b> ' + userCity + '</div>';
+  html += '<div><b>Время в калькуляторе:</b> ' + getTimeSpent() + '</div>';
+  html += '<div><b>Дата:</b> ' + new Date().toLocaleString('ru-RU') + '</div>';
+  html += '</div>';
+
+  // Дом
+  html += '<h3 style="color:#1a5cb8;margin:16px 0 8px">Параметры дома</h3>';
+  html += '<table style="border-collapse:collapse;width:100%;font-size:13px">';
+  html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Размеры</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.house.sideAC}×${data.house.sideBD} мм, ${data.house.floors} эт.</td></tr>`;
+  html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Крыша</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.house.roofType}</td></tr>`;
+  html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Стены</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.house.wallMat} — ${data.house.wallColor}</td></tr>`;
+  html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Профиль</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.profile}</td></tr>`;
+  html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Стеклопакет</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.filling}</td></tr>`;
+  if(data.lamOuter) html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Ламинация снаружи</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.lamOuter}</td></tr>`;
+  if(data.lamInner) html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Ламинация внутри</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.lamInner}</td></tr>`;
+  if(data.extras.length) html += `<tr><td style="padding:4px 8px;border:1px solid #ddd"><b>Доп.</b></td><td style="padding:4px 8px;border:1px solid #ddd">${data.extras.join(', ')}</td></tr>`;
+  html += '</table>';
+
+  // Окна
+  if(data.windows.length){
+    html += '<h3 style="color:#1a5cb8;margin:16px 0 8px">Конструкции (' + data.windows.length + ' шт.)</h3>';
+    html += '<table style="border-collapse:collapse;width:100%;font-size:13px">';
+    html += '<tr style="background:#1a5cb8;color:#fff"><th style="padding:6px 8px">№</th><th style="padding:6px 8px">Стена</th><th style="padding:6px 8px">Этаж</th><th style="padding:6px 8px">Тип</th><th style="padding:6px 8px">Размер</th><th style="padding:6px 8px">Площадь</th><th style="padding:6px 8px">Цена</th></tr>';
+    data.windows.forEach((w, i)=>{
+      const bg = i % 2 ? '#f9f9f9' : '#fff';
+      html += `<tr style="background:${bg}"><td style="padding:4px 8px;border:1px solid #ddd;text-align:center">${i+1}</td>`;
+      html += `<td style="padding:4px 8px;border:1px solid #ddd">${w.side}</td>`;
+      html += `<td style="padding:4px 8px;border:1px solid #ddd;text-align:center">${w.floor}</td>`;
+      html += `<td style="padding:4px 8px;border:1px solid #ddd">${w.type}${w.sash ? ' ('+w.sash+')' : ''}</td>`;
+      html += `<td style="padding:4px 8px;border:1px solid #ddd">${w.width}×${w.height}</td>`;
+      html += `<td style="padding:4px 8px;border:1px solid #ddd">${w.area} м²</td>`;
+      html += `<td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold">${w.price.toLocaleString('ru-RU')} ₽</td></tr>`;
+    });
+    html += `<tr style="background:#e8f0fe;font-weight:bold"><td colspan="5" style="padding:6px 8px;border:1px solid #ddd">ИТОГО</td>`;
+    html += `<td style="padding:6px 8px;border:1px solid #ddd">${data.totalArea} м²</td>`;
+    html += `<td style="padding:6px 8px;border:1px solid #ddd">${data.totalPrice.toLocaleString('ru-RU')} ₽</td></tr>`;
+    html += '</table>';
+  } else {
+    html += '<p style="color:#888">Конструкции не добавлены</p>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// Эскиз окна — рисует на canvas и возвращает base64 PNG
+function drawWindowSketch(c){
+  const canvas = document.createElement('canvas');
+  const scale = 0.2; // px per mm
+  const cw = Math.round(c.w * scale);
+  const ch = Math.round(c.h * scale);
+  const pad = 30;
+  canvas.width = cw + pad * 2;
+  canvas.height = ch + pad * 2 + 20;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Рама
+  const fw = 7; // frame width px
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pad, pad, cw, ch);
+
+  // Створки
+  let parts = 1;
+  if(c.w > 800 && c.w <= 1600) parts = 2;
+  else if(c.w > 1600) parts = 3;
+
+  const sashCount = c.sashCount !== undefined ? c.sashCount : (parts > 1 ? 1 : 0);
+  const partW = cw / parts;
+
+  for(let i = 0; i < parts; i++){
+    const px = pad + partW * i;
+    // Импост
+    if(i > 0){
+      ctx.beginPath();
+      ctx.moveTo(px, pad);
+      ctx.lineTo(px, pad + ch);
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+    // Стекло
+    ctx.fillStyle = '#d0e8f8';
+    ctx.fillRect(px + fw, pad + fw, partW - fw * 2, ch - fw * 2);
+
+    // Открывание
+    const hasSash = (i >= parts - sashCount);
+    if(hasSash){
+      ctx.strokeStyle = '#1a5cb8';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      // Треугольник открывания
+      ctx.beginPath();
+      ctx.moveTo(px + fw, pad + ch - fw);
+      ctx.lineTo(px + partW / 2, pad + fw);
+      ctx.lineTo(px + partW - fw, pad + ch - fw);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+  }
+
+  // Размеры
+  ctx.fillStyle = '#333';
+  ctx.font = 'bold 12px Arial';
+  ctx.textAlign = 'center';
+  // Ширина
+  ctx.fillText(c.w + '', pad + cw / 2, pad - 8);
+  // Высота
+  ctx.save();
+  ctx.translate(pad - 10, pad + ch / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(c.h + '', 0, 0);
+  ctx.restore();
+
+  return canvas.toDataURL('image/png');
+}
+
+function sendOrder(isAutoReport){
+  const data = collectOrderData();
+  if(!isAutoReport && data.windows.length === 0){
+    const st = document.getElementById('submitStatus');
+    st.style.display = 'block';
+    st.style.color = '#c03040';
+    st.textContent = 'Добавьте хотя бы одно окно';
+    return;
+  }
+
+  const clientName = document.getElementById('clientName').value.trim();
+  const clientPhone = document.getElementById('clientPhone').value.trim();
+
+  if(!isAutoReport && !clientPhone){
+    const st = document.getElementById('submitStatus');
+    st.style.display = 'block';
+    st.style.color = '#c03040';
+    st.textContent = 'Укажите телефон для связи';
+    return;
+  }
+
+  const subject = isAutoReport ? 'Отчёт о просчёте в калькуляторе' : 'Заявка из калькулятора';
+  const emailHTML = buildEmailHTML(data, clientName, clientPhone, isAutoReport);
+
+  // Эскизы окон
+  const sketches = [];
+  Object.entries(S.constructions).forEach(([key, c])=>{
+    sketches.push({key: key, dataUrl: drawWindowSketch(c)});
+  });
+
+  // Скриншот 3D модели
+  let screenshot3d = '';
+  try {
+    const canvas3d = document.getElementById('canvas3d');
+    screenshot3d = canvas3d.toDataURL('image/png');
+  } catch(e){}
+
+  const payload = {
+    subject: subject,
+    html: emailHTML,
+    clientName: clientName,
+    clientPhone: clientPhone,
+    city: userCity,
+    timeSpent: getTimeSpent(),
+    sketches: sketches,
+    screenshot3d: screenshot3d,
+    orderData: data,
+    isAutoReport: isAutoReport
+  };
+
+  // Для sendBeacon (уход со страницы) — минимальный payload без картинок
+  if(isAutoReport){
+    delete payload.sketches;
+    delete payload.screenshot3d;
+    const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+    navigator.sendBeacon('send_order.php', blob);
+    return;
+  }
+
+  // Обычная отправка
+  const btn = document.getElementById('btnSubmitOrder');
+  const st = document.getElementById('submitStatus');
+  btn.disabled = true;
+  btn.textContent = 'Отправляю...';
+
+  fetch('send_order.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(d => {
+    if(d.ok){
+      orderSubmitted = true;
+      st.style.display = 'block';
+      st.style.color = '#2e7d32';
+      st.textContent = 'Заявка отправлена! Менеджер свяжется с вами.';
+      btn.textContent = 'Отправлено ✓';
+    } else {
+      throw new Error(d.error || 'Ошибка');
+    }
+  })
+  .catch(err => {
+    st.style.display = 'block';
+    st.style.color = '#c03040';
+    st.textContent = 'Ошибка отправки. Позвоните нам!';
+    btn.disabled = false;
+    btn.textContent = 'Отправить менеджеру';
+  });
+}
+
+// Автоотчёт при уходе
+window.addEventListener('beforeunload', ()=>{
+  if(!orderSubmitted && Object.keys(S.constructions).length > 0){
+    sendOrder(true);
+  }
+});
+
+// ============================================================
 // START
 // ============================================================
-window.addEventListener('DOMContentLoaded', ()=>{initUI();init3D()});
+window.addEventListener('DOMContentLoaded', ()=>{
+  initUI();
+  init3D();
+  document.getElementById('btnSubmitOrder').addEventListener('click', ()=>sendOrder(false));
+});
 </script>
 </body>
 </html>
