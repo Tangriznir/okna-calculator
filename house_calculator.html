@@ -1359,6 +1359,36 @@ function updateSummary(){
   const total = Math.round(totalArea * minPrice);
   document.getElementById('summaryDetails').textContent = `${wc} окон, ${dc} дверей \u00B7 ${totalArea.toFixed(1)} м\u00B2 \u00B7 ${bestName}`;
   document.getElementById('summaryTotal').textContent = `от ${total.toLocaleString('ru-RU')} \u20BD`;
+
+  // Save to localStorage for admin panel (debounced — only on meaningful changes)
+  clearTimeout(updateSummary._logTimer);
+  updateSummary._logTimer = setTimeout(()=>{
+    if(wc===0 && dc===0) return;
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      houseSize: `${S.sideAC}×${S.sideBD}`,
+      floors: S.floors,
+      windowCount: wc,
+      doorCount: dc,
+      totalArea: totalArea.toFixed(1),
+      profile: bestName,
+      totalPrice: total,
+      ip: ''
+    };
+    fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{
+      logEntry.ip = d.ip;
+    }).catch(()=>{}).finally(()=>{
+      const logs = JSON.parse(localStorage.getItem('houseCalcLogs')||'[]');
+      // Avoid duplicate rapid entries — replace if same session within 30s
+      const last = logs[logs.length-1];
+      if(last && (new Date()-new Date(last.timestamp))<30000){
+        logs[logs.length-1] = logEntry;
+      } else {
+        logs.push(logEntry);
+      }
+      localStorage.setItem('houseCalcLogs', JSON.stringify(logs));
+    });
+  }, 3000);
 }
 
 // ============================================================
