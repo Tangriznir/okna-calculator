@@ -15,6 +15,21 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 /* === LAYOUT === */
 .app{display:flex;height:100vh}
 .sidebar{width:340px;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+
+/* === RESPONSIVE === */
+@media(max-width:1300px){
+  .sidebar{width:280px}
+}
+@media(max-width:1050px){
+  .sidebar{width:240px}
+  .row label{min-width:70px;font-size:11px}
+  .section{padding:10px 12px}
+}
+@media(max-width:850px){
+  .sidebar{width:200px}
+  .row label{min-width:60px;font-size:10px}
+  .section-title{font-size:10px}
+}
 .viewport{flex:1;position:relative;background:linear-gradient(180deg,#dce8f0 0%,#c8d8e4 40%,#a8c4a0 40.5%,#b8d0b0 100%)}
 .side-panel{width:320px;max-width:40vw;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;overflow-x:hidden;flex-shrink:0;display:none;position:absolute;right:0;top:0;bottom:0;z-index:10;box-shadow:-4px 0 20px rgba(0,0,0,0.15);box-sizing:border-box;padding-bottom:10px}
 
